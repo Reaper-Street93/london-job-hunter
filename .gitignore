@@ -1,0 +1,13 @@
+# API keys and secrets
+config.py
+
+# Database (regenerated on each run)
+jobs_database.json
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# macOS
+.DS_Store
