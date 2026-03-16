@@ -27,15 +27,79 @@ from config import (
     EMAIL_ENABLED, EMAIL_SENDER, EMAIL_PASSWORD,
     EMAIL_RECIPIENT, SMTP_SERVER, SMTP_PORT,
     LOCATION, MIN_SALARY, MAX_SALARY, DISTANCE_MILES,
-    SEARCH_ROLES, EXCLUDE_KEYWORDS,
+    SEARCH_ROLES, EXCLUDE_KEYWORDS, FULL_TIME_ONLY,
     OUTPUT_DIR, JOBS_DB_FILE, HTML_REPORT_FILE,
 )
 
 
+# London postcode area mapping
+LONDON_POSTCODES = {
+    "EC": "City of London", "WC": "West End",
+    "E": "East London", "N": "North London", "NW": "North West London",
+    "SE": "South East London", "SW": "South West London",
+    "W": "West London",
+    "BR": "Bromley", "CR": "Croydon", "DA": "Dartford",
+    "EN": "Enfield", "HA": "Harrow", "IG": "Ilford",
+    "KT": "Kingston", "RM": "Romford", "SM": "Sutton",
+    "TW": "Twickenham", "UB": "Uxbridge", "WD": "Watford",
+}
+
+import re
+
+def format_location(raw_location):
+    """Convert raw location/postcode into a readable London area name."""
+    if not raw_location:
+        return "London"
+
+    loc = raw_location.strip()
+
+    # Try to extract a postcode and map it to an area
+    postcode_match = re.match(r'^([A-Z]{1,2})\d', loc.upper())
+    if postcode_match:
+        prefix = postcode_match.group(1)
+        area = LONDON_POSTCODES.get(prefix)
+        if area:
+            # Format the postcode properly (e.g. "EC2A 1NT")
+            formatted = re.sub(r'(\S+)\s*(\d[A-Z]{2})$', r'\1 \2', loc.upper())
+            return f"{area}, {formatted}"
+
+    # If it already looks like a readable location, return as-is
+    if any(word in loc.lower() for word in ["london", "city", "canary", "shoreditch",
+            "westminster", "camden", "islington", "hackney", "tower", "southwark",
+            "lambeth", "greenwich", "kensington", "chelsea", "hammersmith",
+            "wandsworth", "richmond", "croydon", "bromley", "barnet"]):
+        return loc
+
+    # If it's just a postcode with no area match
+    postcode_full = re.match(r'^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$', loc.upper())
+    if postcode_full:
+        formatted = re.sub(r'(\S+)\s*(\d[A-Z]{2})$', r'\1 \2', loc.upper())
+        return f"London, {formatted}"
+
+    return loc if loc else "London"
+
+
 def is_excluded(job):
-    """Check if a job should be excluded based on title/company keywords."""
-    text = f"{job.get('title', '')} {job.get('company', '')}".lower()
-    return any(kw in text for kw in EXCLUDE_KEYWORDS)
+    """Check if a job should be excluded based on keywords, salary, or contract type."""
+    text = f"{job.get('title', '')} {job.get('company', '')} {job.get('description', '')}".lower()
+
+    # Keyword exclusions
+    if any(kw in text for kw in EXCLUDE_KEYWORDS):
+        return True
+
+    # Filter out part-time / temp unless it looks like a placement at a known company
+    if FULL_TIME_ONLY:
+        contract = (job.get("contract_type") or "").lower()
+        title = job.get("title", "").lower()
+        if "part time" in contract or "part-time" in contract or "part time" in title or "part-time" in title:
+            return True
+
+    # Filter out suspiciously low salaries (likely part-time or hourly roles)
+    salary = job.get("salary_max") or job.get("salary_min") or 0
+    if salary and salary < MIN_SALARY:
+        return True
+
+    return False
 
 
 def load_database():
@@ -94,7 +158,7 @@ def search_adzuna(role):
             jobs.append({
                 "title": r.get("title", ""),
                 "company": r.get("company", {}).get("display_name", "Unknown"),
-                "location": r.get("location", {}).get("display_name", LOCATION),
+                "location": format_location(r.get("location", {}).get("display_name", LOCATION)),
                 "salary_min": r.get("salary_min"),
                 "salary_max": r.get("salary_max"),
                 "description": r.get("description", "")[:300],
@@ -146,7 +210,7 @@ def search_reed(role):
             jobs.append({
                 "title": r.get("jobTitle", ""),
                 "company": r.get("employerName", "Unknown"),
-                "location": r.get("locationName", LOCATION),
+                "location": format_location(r.get("locationName", LOCATION)),
                 "salary_min": r.get("minimumSalary"),
                 "salary_max": r.get("maximumSalary"),
                 "description": r.get("jobDescription", "")[:300],
