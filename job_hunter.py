@@ -162,7 +162,7 @@ def search_adzuna(role):
                 "salary_min": r.get("salary_min"),
                 "salary_max": r.get("salary_max"),
                 "description": r.get("description", "")[:300],
-                "url": r.get("redirect_url", ""),
+                "url": re.sub(r'[?&]utm_[^&]*', '', re.sub(r'[?&]se=[^&]*', '', re.sub(r'[?&]v=[^&]*', '', r.get("redirect_url", "")))),
                 "date_posted": r.get("created", ""),
                 "source": "Adzuna",
                 "contract_type": r.get("contract_type", ""),
@@ -481,15 +481,32 @@ def generate_html_report(db, new_job_ids):
         }}
 
         .sort-select {{
-            padding: 0.65rem 1rem;
+            padding: 0.65rem 1.25rem 0.65rem 1rem;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 12px;
             color: var(--text-primary);
             font-family: 'Inter', sans-serif;
             font-size: 0.8rem;
+            font-weight: 500;
             outline: none;
             cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0be' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2.25rem;
+            transition: border-color 0.3s;
+        }}
+
+        .sort-select:hover {{ border-color: var(--accent); }}
+        .sort-select:focus {{ border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }}
+
+        .sort-select option {{
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.5rem;
         }}
 
         /* ---- Job Cards ---- */
