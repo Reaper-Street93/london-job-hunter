@@ -27,8 +27,15 @@ from config import (
     EMAIL_ENABLED, EMAIL_SENDER, EMAIL_PASSWORD,
     EMAIL_RECIPIENT, SMTP_SERVER, SMTP_PORT,
     LOCATION, MIN_SALARY, MAX_SALARY, DISTANCE_MILES,
-    SEARCH_ROLES, OUTPUT_DIR, JOBS_DB_FILE, HTML_REPORT_FILE,
+    SEARCH_ROLES, EXCLUDE_KEYWORDS,
+    OUTPUT_DIR, JOBS_DB_FILE, HTML_REPORT_FILE,
 )
+
+
+def is_excluded(job):
+    """Check if a job should be excluded based on title/company keywords."""
+    text = f"{job.get('title', '')} {job.get('company', '')}".lower()
+    return any(kw in text for kw in EXCLUDE_KEYWORDS)
 
 
 def load_database():
@@ -191,21 +198,21 @@ def generate_html_report(db, new_job_ids):
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
         :root {{
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #16161f;
-            --bg-card-hover: #1c1c28;
-            --border: #2a2a3a;
-            --text-primary: #eeeef0;
-            --text-secondary: #8888a0;
-            --text-muted: #55556a;
-            --accent: #6366f1;
-            --accent-light: #818cf8;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --green: #10b981;
-            --green-glow: rgba(16, 185, 129, 0.15);
-            --amber: #f59e0b;
-            --rose: #f43f5e;
+            --bg-primary: #101018;
+            --bg-secondary: #1a1a26;
+            --bg-card: #1e1e2e;
+            --bg-card-hover: #262638;
+            --border: #363650;
+            --text-primary: #f4f4f7;
+            --text-secondary: #a0a0be;
+            --text-muted: #6e6e8a;
+            --accent: #7c7ff7;
+            --accent-light: #a5a8fc;
+            --accent-glow: rgba(124, 127, 247, 0.18);
+            --green: #34d399;
+            --green-glow: rgba(52, 211, 153, 0.18);
+            --amber: #fbbf24;
+            --rose: #fb7185;
         }}
 
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -892,6 +899,8 @@ def run():
         print(f"  Found {len(adzuna_jobs)} (Adzuna) + {len(reed_jobs)} (Reed) = {len(combined)} results")
 
         for job in combined:
+            if is_excluded(job):
+                continue
             jid = job_id(job)
             job["seen_this_run"] = True
 

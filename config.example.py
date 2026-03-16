@@ -55,6 +55,13 @@ SEARCH_ROLES = [
     "Junior Technical Consultant",
 ]
 
+# ---- Excluded Keywords (jobs containing these are filtered out) ----
+EXCLUDE_KEYWORDS = [
+    "senior", "sr.", "sr ", "lead", "principal", "head of", "director",
+    "manager of", "staff",
+    "recruitment", "recruiter", "recruiting", "talent acquisition",
+]
+
 # ---- Output Settings ----
 OUTPUT_DIR = "reports"
 JOBS_DB_FILE = "jobs_database.json"
