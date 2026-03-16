@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>London Job Hunter</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#101018">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-primary: #101018;
+            --bg-secondary: #1a1a26;
+            --bg-card: #1e1e2e;
+            --bg-card-hover: #262638;
+            --border: #363650;
+            --text-primary: #f4f4f7;
+            --text-secondary: #a0a0be;
+            --text-muted: #6e6e8a;
+            --accent: #7c7ff7;
+            --accent-light: #a5a8fc;
+            --accent-glow: rgba(124, 127, 247, 0.18);
+            --green: #34d399;
+            --green-glow: rgba(52, 211, 153, 0.18);
+            --amber: #fbbf24;
+            --amber-glow: rgba(251, 191, 36, 0.12);
+            --rose: #fb7185;
+            --rose-glow: rgba(251, 113, 133, 0.12);
+            --cyan: #22d3ee;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8f9fc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f3f8;
+            --border: #e2e4eb;
+            --text-primary: #1a1a2e;
+            --text-secondary: #5a5a7a;
+            --text-muted: #9090a8;
+            --accent: #5b5ef0;
+            --accent-light: #6366f1;
+            --accent-glow: rgba(91, 94, 240, 0.1);
+            --green: #059669;
+            --green-glow: rgba(5, 150, 105, 0.1);
+            --amber: #d97706;
+            --amber-glow: rgba(217, 119, 6, 0.08);
+            --rose: #e11d48;
+            --rose-glow: rgba(225, 29, 72, 0.08);
+            --cyan: #0891b2;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .bg-grid {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none; z-index: 0;
+        }
+
+        [data-theme="light"] .bg-grid { opacity: 0.5; }
+
+        .bg-glow {
+            position: fixed; width: 600px; height: 600px; border-radius: 50%;
+            filter: blur(120px); opacity: 0.07; pointer-events: none; z-index: 0;
+        }
+        .bg-glow-1 { top: -200px; left: -200px; background: var(--accent); }
+        .bg-glow-2 { bottom: -200px; right: -200px; background: var(--green); }
+
+        [data-theme="light"] .bg-glow { opacity: 0.04; }
+
+        .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+        /* ---- Theme Toggle ---- */
+        .theme-toggle {
+            position: fixed; top: 1.25rem; right: 1.25rem; z-index: 100;
+            width: 42px; height: 42px; border-radius: 12px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s; color: var(--text-secondary);
+        }
+        .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+        .theme-toggle svg { width: 18px; height: 18px; }
+
+        /* ---- Header ---- */
+        .header { text-align: center; padding: 3rem 0 2rem; }
+
+        .header-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 1rem; background: var(--accent-glow);
+            border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 100px;
+            font-size: 0.75rem; font-weight: 500; color: var(--accent-light);
+            letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1rem;
+        }
+        .header-badge .pulse {
+            width: 6px; height: 6px; background: var(--green); border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-light) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .header .subtitle { color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.95rem; font-weight: 300; }
+
+        /* ---- Stats Grid ---- */
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 16px; padding: 1.25rem; text-align: center; transition: border-color 0.3s;
+        }
+        .stat:hover { border-color: var(--accent); }
+        .stat-number { font-size: 2rem; font-weight: 700; line-height: 1; }
+        .stat-number.accent { color: var(--accent-light); }
+        .stat-number.green { color: var(--green); }
+        .stat-number.amber { color: var(--amber); }
+        .stat-number.cyan { color: var(--cyan); }
+        .stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.5rem; }
+
+        /* ---- Salary Insights Panel ---- */
+        .insights-panel {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;
+        }
+        .insights-panel h3 {
+            font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem;
+        }
+        .insights-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .insight-item { text-align: center; }
+        .insight-value { font-size: 1.3rem; font-weight: 700; color: var(--green); }
+        .insight-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* ---- Trend Chart ---- */
+        .trend-panel {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem;
+        }
+        .trend-panel h3 {
+            font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1rem;
+        }
+        .trend-chart { width: 100%; height: 120px; }
+        .trend-bar { fill: var(--accent); rx: 4; transition: fill 0.2s; }
+        .trend-bar:hover { fill: var(--accent-light); }
+        .trend-bar-new { fill: var(--green); rx: 4; }
+        .trend-label { fill: var(--text-muted); font-size: 10px; font-family: 'Inter', sans-serif; }
+        .trend-value { fill: var(--text-secondary); font-size: 10px; font-family: 'Inter', sans-serif; }
+
+        /* ---- Controls ---- */
+        .controls { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input {
+            width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem;
+            background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            outline: none; transition: border-color 0.3s;
+        }
+        .search-box input:focus { border-color: var(--accent); }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .search-box svg { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); }
+
+        .filter-group {
+            display: flex; gap: 0.35rem; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: 12px; padding: 0.25rem;
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem; border-radius: 10px; border: none;
+            background: transparent; color: var(--text-secondary); cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 500; transition: all 0.2s;
+        }
+        .filter-btn:hover { color: var(--text-primary); }
+        .filter-btn.active { background: var(--accent); color: white; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3); }
+
+        .sort-select {
+            padding: 0.65rem 1.25rem 0.65rem 1rem; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: 12px; color: var(--text-primary);
+            font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 500;
+            outline: none; cursor: pointer; appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0be' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 0.75rem center;
+            padding-right: 2.25rem; transition: border-color 0.3s;
+        }
+        .sort-select:hover { border-color: var(--accent); }
+        .sort-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .sort-select option { background: var(--bg-secondary); color: var(--text-primary); }
+
+        /* ---- Action Buttons Row ---- */
+        .action-bar {
+            display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;
+        }
+        .action-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.5rem 1rem; background: var(--bg-secondary);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text-secondary); cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 500;
+            transition: all 0.2s; text-decoration: none;
+        }
+        .action-btn:hover { border-color: var(--accent); color: var(--accent-light); }
+        .action-btn svg { width: 14px; height: 14px; }
+        .action-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent-light); }
+
+        /* ---- Results bar ---- */
+        .results-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 0.25rem; }
+        .results-count { font-size: 0.85rem; color: var(--text-secondary); }
+        .results-count strong { color: var(--text-primary); }
+
+        /* ---- Job Cards ---- */
+        .job-list { display: grid; gap: 0.75rem; }
+
+        .job-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 1.5rem; transition: all 0.25s ease; cursor: default;
+            position: relative; overflow: hidden;
+        }
+        .job-card::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 3px; height: 100%; background: var(--accent); opacity: 0; transition: opacity 0.3s;
+        }
+        .job-card:hover {
+            background: var(--bg-card-hover); border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-1px); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+        }
+        .job-card:hover::before { opacity: 1; }
+        .job-card.new::before { background: var(--green); opacity: 1; }
+        .job-card.status-applied { opacity: 0.6; }
+        .job-card.status-applied::before { background: var(--cyan); opacity: 1; }
+        .job-card.status-rejected { opacity: 0.35; }
+        .job-card.status-saved::before { background: var(--amber); opacity: 1; }
+
+        .job-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+        .job-title { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+        .job-company { font-size: 0.9rem; color: var(--accent-light); font-weight: 500; margin-top: 0.2rem; }
+        .job-salary { font-size: 0.9rem; font-weight: 600; color: var(--green); white-space: nowrap; }
+        .job-salary.unknown { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; }
+
+        .job-meta { display: flex; gap: 1.25rem; margin-top: 0.6rem; flex-wrap: wrap; }
+        .job-meta-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-secondary); }
+        .job-meta-item svg { width: 14px; height: 14px; opacity: 0.5; }
+
+        /* Company research links */
+        .company-links { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+        .company-link {
+            font-size: 0.7rem; color: var(--text-muted); text-decoration: none;
+            padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .company-link:hover { color: var(--accent-light); border-color: var(--accent); }
+
+        .job-desc {
+            font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem; line-height: 1.6;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+
+        /* CV Match bar */
+        .cv-match { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .cv-bar-bg { flex: 1; max-width: 120px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .cv-bar { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+        .cv-bar.high { background: var(--green); }
+        .cv-bar.med { background: var(--amber); }
+        .cv-bar.low { background: var(--rose); }
+        .cv-label { font-size: 0.7rem; color: var(--text-muted); }
+
+        /* Deadline badge */
+        .deadline-badge {
+            font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 4px;
+            font-weight: 600; white-space: nowrap;
+        }
+        .deadline-urgent { background: var(--rose-glow); color: var(--rose); }
+        .deadline-soon { background: var(--amber-glow); color: var(--amber); }
+        .deadline-ok { background: var(--green-glow); color: var(--green); }
+
+        .job-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+        .job-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+
+        .tag { font-size: 0.7rem; padding: 0.25rem 0.65rem; border-radius: 6px; font-weight: 500; letter-spacing: 0.02em; }
+        .tag-source { background: var(--accent-glow); color: var(--accent-light); border: 1px solid rgba(99, 102, 241, 0.15); }
+        .tag-new { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.15); animation: fadeIn 0.5s ease; }
+        .tag-type { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.15); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        /* Status buttons */
+        .status-btns { display: flex; gap: 0.3rem; }
+        .status-btn {
+            padding: 0.35rem 0.7rem; border-radius: 8px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-muted); cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 500; transition: all 0.2s;
+        }
+        .status-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+        .status-btn.saved { background: var(--amber-glow); border-color: var(--amber); color: var(--amber); }
+        .status-btn.applied { background: rgba(34, 211, 238, 0.12); border-color: var(--cyan); color: var(--cyan); }
+        .status-btn.rejected { background: var(--rose-glow); border-color: var(--rose); color: var(--rose); }
+
+        .apply-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.5rem 1.25rem; background: var(--accent); color: white;
+            text-decoration: none; border-radius: 10px; font-size: 0.8rem;
+            font-weight: 600; font-family: 'Inter', sans-serif; transition: all 0.2s; white-space: nowrap;
+        }
+        .apply-btn:hover { background: var(--accent-light); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+        .apply-btn svg { width: 14px; height: 14px; }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 768px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .insights-grid { grid-template-columns: repeat(2, 1fr); }
+            .controls { flex-direction: column; }
+            .search-box { min-width: 100%; }
+            .header h1 { font-size: 1.75rem; }
+            .job-card-top { flex-direction: column; gap: 0.25rem; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        .page-footer { text-align: center; padding: 3rem 0 2rem; color: var(--text-muted); font-size: 0.8rem; }
+        .page-footer a { color: var(--accent-light); text-decoration: none; }
+
+        /* ---- Toast notification ---- */
+        .toast {
+            position: fixed; bottom: 2rem; right: 2rem; padding: 0.75rem 1.25rem;
+            background: var(--bg-card); border: 1px solid var(--accent); border-radius: 12px;
+            color: var(--text-primary); font-size: 0.85rem; z-index: 200;
+            transform: translateY(100px); opacity: 0; transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+        </svg>
+    </button>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-badge"><span class="pulse"></span>Auto-scanning London jobs</div>
+            <h1>London Job Hunter</h1>
+            <p class="subtitle">Last scan: Monday 16 March 2026, 00:23</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat"><div class="stat-number accent">99</div><div class="stat-label">Total Jobs</div></div>
+            <div class="stat"><div class="stat-number green">99</div><div class="stat-label">New This Run</div></div>
+            <div class="stat"><div class="stat-number amber">49</div><div class="stat-label">Companies</div></div>
+            <div class="stat"><div class="stat-number cyan" id="appliedCount">0</div><div class="stat-label">Applied</div></div>
+        </div>
+
+        <!-- Salary Insights -->
+        <div class="insights-panel">
+            <h3>Salary Insights</h3>
+            <div class="insights-grid">
+                <div class="insight-item"><div class="insight-value">&#163;42,500</div><div class="insight-label">Average</div></div>
+                <div class="insight-item"><div class="insight-value">&#163;41,025</div><div class="insight-label">Median</div></div>
+                <div class="insight-item"><div class="insight-value">&#163;29,000</div><div class="insight-label">Lowest</div></div>
+                <div class="insight-item"><div class="insight-value">&#163;60,000</div><div class="insight-label">Highest</div></div>
+            </div>
+        </div>
+
+        <!-- Trend Chart -->
+        
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="search-box">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="searchInput" placeholder="Search jobs, companies, keywords..." oninput="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+                <button class="filter-btn" onclick="setFilter('new', this)">New</button>
+                <button class="filter-btn" onclick="setFilter('saved', this)">Saved</button>
+                <button class="filter-btn" onclick="setFilter('applied', this)">Applied</button>
+                <button class="filter-btn" onclick="setFilter('Adzuna', this)">Adzuna</button>
+                <button class="filter-btn" onclick="setFilter('Reed', this)">Reed</button>
+                
+            </div>
+            <select class="sort-select" id="sortSelect" onchange="applyFilters()">
+                <option value="date">Newest first</option>
+                <option value="salary-high">Salary: High to Low</option>
+                <option value="salary-low">Salary: Low to High</option>
+                <option value="company">Company A-Z</option>
+                
+                <option value="deadline">Closing Soon</option>
+            </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-bar">
+            <button class="action-btn" onclick="exportCSV()">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                Export CSV
+            </button>
+            <button class="action-btn" onclick="toggleHideApplied()" id="hideAppliedBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                Hide Applied
+            </button>
+            <button class='action-btn' id='cvUploadBtn' onclick="document.getElementById('cvInput').click()">Upload CV for Matching</button><input type='file' id='cvInput' accept='.txt,.pdf,.doc,.docx' style='display:none' onchange='handleCVUpload(event)'>
+        </div>
+
+        <div class="results-bar">
+            <span class="results-count" id="resultsCount">Showing <strong>99</strong> jobs</span>
+        </div>
+
+        <div class="job-list" id="jobList"></div>
+
+        <div class="page-footer">
+            London Job Hunter &middot; Auto-generated report<br>
+            Built by Seb Barclay
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ---- Data ----
+    const JOBS = [{"id": "177c0590e7a424d0bb4b6bd077159c9c", "title": "Account Manager", "company": "M TWO Search Ltd.", "company_slug": "m-two-search-ltd", "location": "North London, N15 4FH", "salary_str": "", "salary_val": 0, "description": "About you You like the idea of being more than just employee number twenty three. You want to be close to the action. You want to see how decisions are made, how clients are won and how a print and design business actually grows. You might be early i", "url": "https://www.reed.co.uk/jobs/56539966", "date_posted": "25/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.964840"}, {"id": "f9bd8e28f163fabd6e60e1a7454b7a19", "title": "Graduate Executive Search Consultant", "company": "Virtus Talent", "company_slug": "virtus-talent", "location": "City of London, EC1A 9HZ", "salary_str": "£32,500 - £50,000", "salary_val": 32500, "description": "Package: 30K- 35K Basic + Uncapped Commission + Benefits ( 40K OTE Year 1) ( 50K Year 2) 70K Year 3) Kick-start your career in executive search with a high-growth, sociable, and rewarding environment! Are you ambitious, driven, and eager to break int", "url": "https://www.reed.co.uk/jobs/56519815", "date_posted": "23/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:22.703277"}, {"id": "c6e24261237d6450a63f73b42c93e4ff", "title": "Desk Quant Analyst", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "66,000 - 85,000 GBP Onsite WORKING Location: Central London, Greater London - United Kingdom Type: Permanent Desk Quant Analyst - Junior Introduction for a Desk Quant Analyst: My client is a global investment management firm that utilizes a diversifi", "url": "https://www.reed.co.uk/jobs/56518969", "date_posted": "23/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.835231"}, {"id": "6bfac317a4bb981dff7575cf685773bc", "title": "Data Analyst / Junior Data Scientist", "company": "Akkodis", "company_slug": "akkodis", "location": "Spitalfields, East London", "salary_str": "£34,000 - £38,000", "salary_val": 34000, "description": "Salary: £34,000 - 38,000 per year Requirements: At least 1 year commercial experience working in a similar Data Analyst, Junior Data Scientist or Data Engineer position. Knowledge or experience using software-based data analysis tools such as Excel, ", "url": "https://www.adzuna.co.uk/jobs/details/5666070818", "date_posted": "2026-03-15", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.832722"}, {"id": "927babdea3c2525a6554f81eeb56c31b", "title": "Junior IT Business Analyst", "company": "Gold Group", "company_slug": "gold-group", "location": "Liverpool Street, Central London", "salary_str": "£45,000 - £45,000", "salary_val": 45000, "description": "Salary: £45,000 - 45,000 per year Requirements: Analytical mindset with the ability to break down problems Attention to detail Basic understanding of process mapping or willingness to learn Basic understanding of requirements gathering or willingness", "url": "https://www.adzuna.co.uk/jobs/details/5666070680", "date_posted": "2026-03-15", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.750556"}, {"id": "75b83e1a4f662a26fa933e9f26fce1f9", "title": "Junior Data Analyst", "company": "TRIA", "company_slug": "tria", "location": "Victoria, South West London", "salary_str": "£35,000 - £40,000", "salary_val": 35000, "description": "Salary: £35,000 - 40,000 per year Requirements: A recent graduate or 1-2 years experience in Data Science, Computer Science, Mathematics, Statistics, or a related field Hands-on experience with Python or similar data tools Understanding of core machi", "url": "https://www.adzuna.co.uk/jobs/details/5666070263", "date_posted": "2026-03-15", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.832795"}, {"id": "f4aa7b1122484db0c1cead8982c6ecab", "title": "AI Data Analyst", "company": "Hays Technology", "company_slug": "hays-technology", "location": "The City, Central London", "salary_str": "£30,000 - £37,200", "salary_val": 30000, "description": "Salary: £30,000 - 37,200 per year Requirements: Previous experience in a Data and Analytics role in a large organisation Hands-on experience and interest in AI Experience doing process mapping and stakeholder management Responsibilities: Documenting ", "url": "https://www.adzuna.co.uk/jobs/details/5666069557", "date_posted": "2026-03-15", "source": "Adzuna", "contract_type": "contract", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.912591"}, {"id": "d0812f4f2e5c7f031a47bfd1ee789a87", "title": "Junior Data Scientist / Data Analyst", "company": "Akkodis", "company_slug": "akkodis", "location": "Spitalfields, East London", "salary_str": "£34,000 - £38,000", "salary_val": 34000, "description": "Salary: £34,000 - 38,000 per year Requirements: At least 1 year commercial experience working in a similar Junior Data Scientist, Data Engineer or Data Analyst position. Knowledge or experience using software-based data analysis tools such as Excel, ", "url": "https://www.adzuna.co.uk/jobs/details/5666069484", "date_posted": "2026-03-15", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.832926"}, {"id": "7567d41b2557b16c01d91b8b698a8b53", "title": "Junior Solutions Data Analyst", "company": "Broadridge Trading & Connectivity Solutions", "company_slug": "broadridge-trading-connectivity-solutions", "location": "London, UK", "salary_str": "£59,579 - £59,579", "salary_val": 59579, "description": "At Broadridge, we've built a culture where the highest goal is to empower others to accomplish more. If you're passionate about developing your career, while helping others along the way, come join the Broadridge team. We are looking for a Junior Sol", "url": "https://www.adzuna.co.uk/jobs/land/ad/5665353423", "date_posted": "2026-03-14", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.832978"}, {"id": "ffcc7776194ef665def9b2253f3259ea", "title": "Digital Consultant", "company": "AECOM", "company_slug": "aecom", "location": "London, UK", "salary_str": "£44,758 - £44,758", "salary_val": 44758, "description": "Company Description Work with Us. Change the World. At AECOM, we're delivering a better world. Whether improving your commute, keeping the lights on, providing access to clean water, or transforming skylines, our work helps people and communities thr", "url": "https://www.adzuna.co.uk/jobs/details/5664204852", "date_posted": "2026-03-13", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.912687"}, {"id": "9c6e5fafef8d15f166b69cf6836a3426", "title": "Junior Project Manager", "company": "EL&N Limited", "company_slug": "el-n-limited", "location": "Knightsbridge, South West London", "salary_str": "£30,000 - £30,000", "salary_val": 30000, "description": "Job description: Are you obsessed with timelines, checklists, and making things happen? Do you thrive on seeing a concept turn into a fully operating, buzzing café or store? If yes you might just be our next Junior Pre-Openings Manager . In this role", "url": "https://www.adzuna.co.uk/jobs/land/ad/5663832427", "date_posted": "2026-03-13", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.962195"}, {"id": "7603a7c48c0c24d5517ca7511ada00d5", "title": "Automation Engineer", "company": "Fast Technologies", "company_slug": "fast-technologies", "location": "London, UK", "salary_str": "£50,000 - £50,000", "salary_val": 50000, "description": "JOB TITLEAutomation Engineer Reporting to:Engineering Manager Working with:Automation Team About FAST FAST is an advanced manufacturing company, specialising in bespoke machine build, automation, robotics, and software solutions for companies globall", "url": "https://www.adzuna.co.uk/jobs/land/ad/5662344366", "date_posted": "2026-03-12", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.962308"}, {"id": "9a85fc2a1ceddc24cd86e94fd890fe2d", "title": "Trainee Junior Project Manager", "company": "ITOL Recruit", "company_slug": "itol-recruit", "location": "London, UK", "salary_str": "£30,000 - £38,000", "salary_val": 30000, "description": "Are you looking to benefit from a new career in Project Management? If you are organised, competent, dependable and can communicate well and motivate those around you; you could have a truly rewarding future as a Project Manager. We do this using our", "url": "https://www.adzuna.co.uk/jobs/details/5661792969", "date_posted": "2026-03-11", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.962643"}, {"id": "ae8fca7daabd68c2838fcea80b6abb56", "title": "Trainee Project Administrator", "company": "ITOL Recruit", "company_slug": "itol-recruit", "location": "London, UK", "salary_str": "£30,000 - £38,000", "salary_val": 30000, "description": "Are you looking to benefit from a new career in Project Management? If you are organised, competent, dependable and can communicate well and motivate those around you; you could have a truly rewarding future as a Project Manager. We do this using our", "url": "https://www.adzuna.co.uk/jobs/details/5661646204", "date_posted": "2026-03-11", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.963030"}, {"id": "f0bca8f0179e8d76c3c949a5a810864b", "title": "AI Operations Analyst", "company": "Checkatrade", "company_slug": "checkatrade", "location": "Moorgate, Central London", "salary_str": "£54,172 - £54,172", "salary_val": 54172, "description": "As our next AI Operations Analyst, you’ll make sure our AI-powered customer experience tools run reliably day to day and get better week to week. You’ll keep the knowledge base accurate, the guardrails tight, performance on track, and help us scale i", "url": "https://www.adzuna.co.uk/jobs/details/5661494701", "date_posted": "2026-03-11", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.912757"}, {"id": "957a3251928492820d09ed972846cd8e", "title": "Project Manager", "company": "Ernest and Florent", "company_slug": "ernest-and-florent", "location": "Piccadilly, West London", "salary_str": "£55,000 - £65,000", "salary_val": 55000, "description": "A boutique project management consultancy based in Central London are looking for a highly intelligent Project Manager to join their team and support the delivery of schemes in the retail and food/beverage sector. The Company that the Project Manager", "url": "https://www.adzuna.co.uk/jobs/details/5661103598", "date_posted": "2026-03-11", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.963116"}, {"id": "932588e470be0fa74a727f3b1f443432", "title": "Project Manager Trainee", "company": "ITOL Recruit", "company_slug": "itol-recruit", "location": "Twickenham, London", "salary_str": "£30,000 - £45,000", "salary_val": 30000, "description": "Are you looking to benefit from a new career in Project Management? If you are organised, competent, dependable and can communicate well and motivate those around you; you could have a truly rewarding future as a Project Manager. We do this using our", "url": "https://www.adzuna.co.uk/jobs/details/5660298171", "date_posted": "2026-03-10", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.963558"}, {"id": "1a92c197e58c109c0a9afa02b0a74779", "title": "Project Engineer", "company": "PM Group", "company_slug": "pm-group", "location": "South East London, London", "salary_str": "£41,500 - £41,500", "salary_val": 41500, "description": "Project Engineer Position Type: Contract Location: South East PM Group requires Project Engineering support for the management and execution of projects, working for a pharmaceuticals client in the South East. Responsibilities: * Project engineering ", "url": "https://www.adzuna.co.uk/jobs/land/ad/5660284026", "date_posted": "2026-03-10", "source": "Adzuna", "contract_type": "contract", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.963890"}, {"id": "f5b290bd9928fb6791a037a93f243d8c", "title": "Application Support Specialist", "company": "Royal London Group", "company_slug": "royal-london-group", "location": "London, UK", "salary_str": "£52,085 - £52,085", "salary_val": 52085, "description": "Application Support Specialist Contract type: Permanent Location: London Working style: Hybrid 50% home/office based Closing date:Monday 23rd March 2026 We’re excited to introduce a brand-new opportunity at Royal London Asset Management, created as p", "url": "https://www.adzuna.co.uk/jobs/details/5659529924", "date_posted": "2026-03-09", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:15.498762"}, {"id": "9056ece6c7a06d6df9c00c5ad5e13271", "title": "Data Analyst Trainee", "company": "ITOL Recruit", "company_slug": "itol-recruit", "location": "London, UK", "salary_str": "£30,000 - £50,000", "salary_val": 30000, "description": "Are you looking to benefit from a new career in Data Analysis? If you are detail orientated, perceptive, organised, competent, analytical and can communicate well with those around you; you could have a truly rewarding future as a Data Analyst We do ", "url": "https://www.adzuna.co.uk/jobs/land/ad/5659516990", "date_posted": "2026-03-09", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.833035"}, {"id": "5b2335ccf44e07c9e5c6d2d8dd0ff460", "title": "Project Manager", "company": "Ernest and Florent LTD", "company_slug": "ernest-and-florent-ltd", "location": "Covent Garden, Central London", "salary_str": "£55,000 - £65,000", "salary_val": 55000, "description": "A well respected building consultancy with an office in Notting Hill are looking for a Project Manager to join their team, who strong experience of delivering the lifecycle of projects within the commercial office sector. The Company that the Project", "url": "https://www.adzuna.co.uk/jobs/land/ad/5659495876", "date_posted": "2026-03-09", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.964057"}, {"id": "4e3d0c15d7f1def2cb299a988f268140", "title": "Junior Project Manager - ERP", "company": "Safer Hand Solutions", "company_slug": "safer-hand-solutions", "location": "London, UK", "salary_str": "£40,000 - £60,000", "salary_val": 40000, "description": "Junior Project Manager - ERP I am working with a highly respected, premium and extremely successful global consulting firm that is experiencing rapid growth across its UK operations, where innovation, development, and client impact go hand in hand. A", "url": "https://www.adzuna.co.uk/jobs/details/5659469844", "date_posted": "2026-03-09", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:38.964134"}, {"id": "5f512a20016cfc41e5d6e34b757b2c7f", "title": "Data Science Trainee", "company": "ITOL Recruit", "company_slug": "itol-recruit", "location": "Twickenham, London", "salary_str": "£30,000 - £50,000", "salary_val": 30000, "description": "Artificial Intelligence is used in every industry and as artificial intelligence requires data to operate there is now a massive growing demand for Data experts. If you are detail orientated, perceptive, organised, competent, analytical and can commu", "url": "https://www.adzuna.co.uk/jobs/land/ad/5659415357", "date_posted": "2026-03-09", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.833132"}, {"id": "260a00d120643716f632c29f1c182f1e", "title": "Junior Robotic Project Assistant Business Analyst", "company": "Diamond Blaque HR Solutions", "company_slug": "diamond-blaque-hr-solutions", "location": "Southwark, South East London", "salary_str": "£32,593 - £42,286", "salary_val": 32593, "description": "Job Description We are looking for a highly motivated and enthusiastic Junior RPA Business Analyst to join our local government client in Southwark, London. This is an excellent opportunity for someone keen to learn and grow in Robotic Process Automa", "url": "https://www.adzuna.co.uk/jobs/land/ad/5659387196", "date_posted": "2026-03-09", "source": "Adzuna", "contract_type": "contract", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.750693"}, {"id": "e37039c5d216d4a4ce2a9a3d4116cf45", "title": "Technical Business Analyst", "company": "Valcon", "company_slug": "valcon", "location": "The City, Central London", "salary_str": "£59,899 - £59,899", "salary_val": 59899, "description": "Business Analyst – Technology, Data & AI Transformation About Valcon At Valcon, we are a European powerhouse in technology, data, and AI-driven business transformation. We combine deep expertise in digital technology, data platforms, and AI with our ", "url": "https://www.adzuna.co.uk/jobs/land/ad/5657480825", "date_posted": "2026-03-07", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.912840"}, {"id": "8530abbca1378a60baa77250f0d99dc9", "title": "Product Partnerships Associate", "company": "INSTANDA", "company_slug": "instanda", "location": "Monument, Central London", "salary_str": "£51,686 - £51,686", "salary_val": 51686, "description": "We’re pushing the boundaries of Insurance Technology INSTANDA is the worlds first no code platform for Insurance. A pioneering Insurtech, we’re revolutionising the insurance industry by offering insurers a versatile tool to create, manage, and distri", "url": "https://www.adzuna.co.uk/jobs/details/5656462743", "date_posted": "2026-03-06", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.632589"}, {"id": "73ee27043eb76748443cdf3ea8dd8f7a", "title": "Junior Data Analyst", "company": "Anson Mccade", "company_slug": "anson-mccade", "location": "The City, Central London", "salary_str": "£53,782 - £53,782", "salary_val": 53782, "description": "Junior Data Analyst £40,000 to 60,000 GBP Hybrid WORKING Location: Central London, Greater London - United Kingdom Type: Permanent Junior AI / Data Analyst Location: London (Hybrid) Salary: £40,000 - £60,000 per year Contract Type: Permanent / Full-t", "url": "https://www.adzuna.co.uk/jobs/details/5655614685", "date_posted": "2026-03-05", "source": "Adzuna", "contract_type": "contract", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.833365"}, {"id": "abb931d64158ee219e5074f846534c3c", "title": "AI Research Analyst (R&D)", "company": "Hireful", "company_slug": "hireful", "location": "Central London, London", "salary_str": "£50,000 - £50,000", "salary_val": 50000, "description": "AI Research Analyst (R&D) AI, Automation & Emerging Technology UK | Junior–Mid Level | 2 Years Experience About the Role We're building a disciplined R&D capability to explore emerging technologies, validate new approaches, and feed high-quality inno", "url": "https://www.adzuna.co.uk/jobs/details/5655614054", "date_posted": "2026-03-05", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.913157"}, {"id": "3b4b78a7511d1a5c883b925cf7281a3a", "title": "AI Research Analyst (R&D)", "company": "hireful.", "company_slug": "hireful", "location": "London, UK", "salary_str": "£40,000 - £50,000", "salary_val": 40000, "description": "AI Research Analyst (R&D) AI, Automation & Emerging Technology UK | Junior–Mid Level | 2 Years Experience About the Role We’re building a disciplined R&D capability to explore emerging technologies, validate new approaches, and feed high-quality inno", "url": "https://www.adzuna.co.uk/jobs/land/ad/5655092051", "date_posted": "2026-03-05", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.913226"}, {"id": "8eab5f0825ffddd131b2e42ec59b4418", "title": "AI & Data Analyst", "company": "PMC Treasury", "company_slug": "pmc-treasury", "location": "The City, Central London", "salary_str": "£52,439 - £52,439", "salary_val": 52439, "description": "About us If you are looking to join an independent and impartial treasury and risk management consultancy, PMC is your solution. Established for over 34 years, we offer expert advice and practical solutions to financial sponsors and their portfolio c", "url": "https://www.adzuna.co.uk/jobs/land/ad/5655061463", "date_posted": "2026-03-05", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.913293"}, {"id": "d78ae0468cc9d4a20ad08746457c963c", "title": "Plant Supervisor", "company": "Veolia", "company_slug": "veolia", "location": "London, UK", "salary_str": "£33,700 - £33,700", "salary_val": 33700, "description": "Ready to find the right role for you? Salary: Competitive plus Veolia benefits Grade: 4.3 Hours: 42.5 hours per week Location: Coldharbour Lane Rainham Essex RM13 9YB When you see the world as we do, you see the chance to help the world take better c", "url": "https://www.adzuna.co.uk/jobs/land/ad/5654981415", "date_posted": "2026-03-05", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.632716"}, {"id": "340ac3e0cf1c17652194e819c3851a2d", "title": "AI Engineer", "company": "Oscar Technology", "company_slug": "oscar-technology", "location": "London, UK", "salary_str": "£40,000 - £50,000", "salary_val": 40000, "description": "AI Engineer (Junior Level) Location: Fully Remote (UK working hours) Salary: £40,000 - £50,000 Contract: Permanent, Full-time About the Company We're partnering with a fast-growing AI-first biotech startup that has recently secured significant fundin", "url": "https://www.adzuna.co.uk/jobs/land/ad/5653858516", "date_posted": "2026-03-04", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:03.751594"}, {"id": "892d2a065ba9c847f847c8919f9e1a61", "title": "Junior Solutions Engineer", "company": "V-Nova", "company_slug": "v-nova", "location": "Paddington, West London", "salary_str": "£41,025 - £41,025", "salary_val": 41025, "description": "Are you early in your technical career and looking for a role where you can learn fast, gain real customer exposure, and build deep expertise in video and delivery technologies? As a Junior Solutions Engineer , you’ll work alongside experienced Solut", "url": "https://www.adzuna.co.uk/jobs/details/5653701223", "date_posted": "2026-03-04", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:20.866733"}, {"id": "107dc2045d8889d4f96cd2a1bbee6f1c", "title": "Programme Health Analyst", "company": "Multiverse", "company_slug": "multiverse", "location": "London, UK", "salary_str": "£39,522 - £39,522", "salary_val": 39522, "description": "Multiverse is the upskilling platform for AI and Tech adoption. We have partnered with 1,500 companies to deliver a new kind of learning that's transforming today’s workforce. Our upskilling apprenticeships are designed for people of any age and care", "url": "https://www.adzuna.co.uk/jobs/details/5653648762", "date_posted": "2026-03-04", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.913597"}, {"id": "269c2d4006b4e69129a98573c9ff43aa", "title": "Trainee Data Analyst", "company": "ITOL Recruit", "company_slug": "itol-recruit", "location": "Enfield, London", "salary_str": "£30,000 - £50,000", "salary_val": 30000, "description": "Artificial Intelligence is used in every industry and as artificial intelligence requires data to operate there is now a massive growing demand for Data experts. If you are detail orientated, perceptive, organised, competent, analytical and can commu", "url": "https://www.adzuna.co.uk/jobs/land/ad/5653496052", "date_posted": "2026-03-04", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:28.833467"}, {"id": "f146ca212b7983eb432a26e95ac63edc", "title": "Clinical Logistics Associate", "company": "Parkside Office Professional", "company_slug": "parkside-office-professional", "location": "Uxbridge, London", "salary_str": "£53,482 - £53,482", "salary_val": 53482, "description": "Clinical Logistics Associate 12 month contract Hybrid role Clinical Logistics AssociateHybrid role12 month contract The Clinical Logistics Associate manages investigational product cell journey logistics, ensuring chain of custody and chain of identi", "url": "https://www.adzuna.co.uk/jobs/details/5652525194", "date_posted": "2026-03-03", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.632813"}, {"id": "f8efff01729a1f8cf6c69ad6288a751b", "title": "Junior AI Data Engineer", "company": "Hireful", "company_slug": "hireful", "location": "Central London, London", "salary_str": "£40,000 - £40,000", "salary_val": 40000, "description": "Take the next step in your data career & work with cutting-edge AI driven data migration projects! Small, but mighty data transformation company, operating in the financial services & banking arena are looking for a Data Analyst / Data Engineer to wo", "url": "https://www.adzuna.co.uk/jobs/details/5652419202", "date_posted": "2026-03-03", "source": "Adzuna", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:03.751775"}, {"id": "b45cc34f69ee71911e9355e1e3233497", "title": "Junior Business Analyst (Japanese Speaking)", "company": "STEM", "company_slug": "stem", "location": "London, UK", "salary_str": "£36,084 - £36,084", "salary_val": 36084, "description": "Company: STEM : Ignite Position: Junior Business Analyst (Japan/ UK market) Location: Hybrid (remote/ Holborn gate office) Vacancy Type: Permanent, full time Job purpose: A great opportunity to join a dynamic, fast paced global pharmaceutical and lif", "url": "https://www.adzuna.co.uk/jobs/details/5652390805", "date_posted": "2026-03-03", "source": "Adzuna", "contract_type": "permanent", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.750964"}, {"id": "780d1c0be888547a8f250812ee9d6393", "title": "Clinical Logistics Associate", "company": "Parkside", "company_slug": "parkside", "location": "Hillingdon, Uxbridge", "salary_str": "£36,176 - £36,176", "salary_val": 36176, "description": "Clinical Logistics Associate Hybrid role 12 month contract The Clinical Logistics Associate manages investigational product cell journey logistics, ensuring chain of custody and chain of identity compliance throughout clinical trials. This role partn", "url": "https://www.adzuna.co.uk/jobs/land/ad/5652337928", "date_posted": "2026-03-03", "source": "Adzuna", "contract_type": "contract", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.632901"}, {"id": "994722697a96a280c01219df8189d6a1", "title": "Submissions Development Representative", "company": "Chambers and Partners", "company_slug": "chambers-and-partners", "location": "London", "salary_str": "", "salary_val": 0, "description": "Overview We are looking for a results-driven, tenacious graduate with the ambition of a career in Sales/Customer Success to join our expanding Submissions team in London, starting in spring 2026 Equal Opportunity Statement We are committed to fosteri", "url": "https://www.reed.co.uk/jobs/56505880", "date_posted": "20/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:46.422654"}, {"id": "78b47aec5d6db95f17cd75bc7739737e", "title": "Business Development Executive", "company": "Norton Rose Fulbright LLP", "company_slug": "norton-rose-fulbright-llp", "location": "London", "salary_str": "", "salary_val": 0, "description": "Practice Group / Department: Business Development - London Job Description We're Norton Rose Fulbright - a global law firm with over 50 offices and 7,000 employees worldwide. We provide the world’s preeminent corporations and financial institutions w", "url": "https://www.reed.co.uk/jobs/56354495", "date_posted": "20/01/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:40.869222"}, {"id": "d79d7a86cfbeba7c6acf5dae28a09fc9", "title": "Investment Oversight Data Scientist: Professional Placement Year Internship - AXA Investment Managers", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Position job title: Investment Oversight Data Scientist: Professional Placement Year Internship Business unit: AXA IM Core (Investments, Trading &amp; Client activities) Contract type: Internship Preferred start date: June/ July 2026 Eligibility Unde", "url": "https://www.reed.co.uk/jobs/56496100", "date_posted": "19/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.920662"}, {"id": "0175aeaef27c5bb0cf9f2c5606a28c9e", "title": "Brand & Growth Executive", "company": "BrighterBox", "company_slug": "brighterbox", "location": "City of London, EC1N 8JG", "salary_str": "£30,000 - £32,000", "salary_val": 30000, "description": "This is a fast-growing, independent digital product studio working with ambitious organisations in the UK and internationally. They partner with clients from early strategy through to design, delivery and ongoing improvement; focusing on meaningful, ", "url": "https://www.reed.co.uk/jobs/56489719", "date_posted": "19/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:15.499708"}, {"id": "deec48c5876fd96d5300cdb78c829a12", "title": "Expanse Pharmacy Analyst (Maternity Cover)", "company": "HCA Healthcare UK", "company_slug": "hca-healthcare-uk", "location": "South East London, SE1 9BG", "salary_str": "", "salary_val": 0, "description": "Expanse Pharmacy Analyst (Paediatric Pharmacist Maternity Cover) Based at London Bridge Full&nbsp;time:&nbsp;37.5&nbsp;hours per week Hours: Monday to Friday 9-5.30pm&nbsp;Hybrid (at least 2 days on site) Permanent&nbsp; Salary&nbsp;:&nbsp;Competitiv", "url": "https://www.reed.co.uk/jobs/56488435", "date_posted": "18/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.657603"}, {"id": "8948d467b76d1768a99e5ce6033f275e", "title": "Graduate Executive Search Researcher", "company": "Virtus Talent", "company_slug": "virtus-talent", "location": "West End, WC1A 1NL", "salary_str": "£32,500 - £50,000", "salary_val": 32500, "description": "Package: 30K- 35K Basic + Uncapped Commission + Benefits ( 40K OTE Year 1) ( 50K Year 2) 70K Year 3) Kick-start your career in executive search with a high-growth, sociable, and rewarding environment! Are you ambitious, driven, and eager to break int", "url": "https://www.reed.co.uk/jobs/56478204", "date_posted": "17/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:22.703801"}, {"id": "24e21ac050ef5493ca43a8bd2af18613", "title": "Junior Solutions Data Analyst", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "At Broadridge, we've built a culture where the highest goal is to empower others to accomplish more. If you're passionate about developing your career, while helping others along the way, come join the Broadridge team. We are looking for a Junior Sol", "url": "https://www.reed.co.uk/jobs/56647189", "date_posted": "16/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.751559"}, {"id": "c8876900672bcc581b66d2298df75d70", "title": "Clinical Specialist Nuclear Medicine Technologist", "company": "HCA Healthcare UK", "company_slug": "hca-healthcare-uk", "location": "North West London, NW8 9LE", "salary_str": "", "salary_val": 0, "description": "Clinical Specialist Nuclear Medicine Technologist London, The Wellington Hospital Full Time, 37.5 hours per week Shift times: 7.5 hour shifts Monday-Friday between 08:00am and 20:00pm Contract Type: Permanent Salary: Up to 54,645 dependent on skills ", "url": "https://www.reed.co.uk/jobs/56475347", "date_posted": "16/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:15.499583"}, {"id": "09c2c2b54404b3f17a4a24eca19abaa4", "title": "Non-Linear Credit Quant Research - VP - Morgan McKinley", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Non-Linear Credit Quantitative Researcher, Vice President level role, will focus on the global management, development, delivery, maintenance and support of FICC and EQD Research's cross-asset analytics software libraries: Development and implementat", "url": "https://www.reed.co.uk/jobs/56646557", "date_posted": "15/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.754766"}, {"id": "e4c506ab8637362048c0dce44b2499a4", "title": "PMO Governance Analyst", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "At Broadridge, we've built a culture where the highest goal is to empower others to accomplish more. If you're passionate about developing your career, while helping others along the way, come join the Broadridge team. The PMO Governance Analyst is r", "url": "https://www.reed.co.uk/jobs/56646947", "date_posted": "15/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.924173"}, {"id": "ec6d17fef6732540e9bbf2c17f32737e", "title": "Customer Data Architect - Associate Manager", "company": "Accenture", "company_slug": "accenture", "location": "London", "salary_str": "", "salary_val": 0, "description": "Customer Data Architect – Associate Manager London, Manchester (or other UK location) Associate Manager (CL8) Practice: Song Data &amp; AI We Are:&nbsp; Accenture Song accelerates growth and value for our clients through sustained customer relevance.", "url": "https://www.reed.co.uk/jobs/55921638", "date_posted": "14/10/2025", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:20.866952"}, {"id": "a7d2bc5ead8115f69cbe116ca2adc7f7", "title": "Intern Analyst, Restructuring - Interpath Advisory", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Interpath Advisory provides critical financial advisory and restructuring services to clients globally and locally. We have a growing international presence and currently have 30 locations across the UK, Ireland, Europe, Asia-Pacific, and the Caribbe", "url": "https://www.reed.co.uk/jobs/56645308", "date_posted": "14/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.668183"}, {"id": "beacd7d42a12e3d4d0193be4af2946b1", "title": "Intern Analyst, Contentious Insolvency - Interpath Advisory", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Interpath Advisory is a financial advisory business built on agility and independence. We exist to help our clients navigate their most difficult challenges and seize transformational opportunities. Since our transition from KPMG in 2021, we have gro", "url": "https://www.reed.co.uk/jobs/56645320", "date_posted": "14/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.673314"}, {"id": "7910dec51c8b3192929b7f731c7bd0b0", "title": "Intern Analyst, Value Creations - Interpath Advisory", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Interpath Advisory is looking for a motivated and dynamic Intern to join their Value Creation team. This role offers a unique opportunity to shape your career while helping clients navigate complex challenges and create lasting value within their org", "url": "https://www.reed.co.uk/jobs/56645292", "date_posted": "14/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.675477"}, {"id": "f0d8aa841894bb785ba881b68fd05962", "title": "Intern Analyst, Asset Tracing & Complex Investigations - Interpath Advisory", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Interpath Advisory provides critical financial advisory and restructuring services to clients globally and locally. We have a growing international presence and currently have 30 locations across the UK, Ireland, France, Germany, Spain, Austria, Alge", "url": "https://www.reed.co.uk/jobs/56645301", "date_posted": "14/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.678622"}, {"id": "bc13b7a04cd45534a1b6085f4b6fd869", "title": "Intern Analyst, Data and Technology - Interpath Advisory", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Interpath Advisory provides critical financial advisory and restructuring services to clients globally and locally. We have a growing international presence and currently have 30 locations across the UK, Ireland, France, Germany, Spain, Austria, Alge", "url": "https://www.reed.co.uk/jobs/56645323", "date_posted": "14/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:30.929157"}, {"id": "b31a9465255d04f208234b17a6241a9c", "title": "UK Commercial Bank - Consumer & Retail Associate AVP - Citi", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Discover your future at Citi Working at Citi is far more than just a job. A career with us means joining a team of more than 230,000 dedicated people from around the globe. At Citi, you'll have the opportunity to grow your career, give back to your c", "url": "https://www.reed.co.uk/jobs/56645534", "date_posted": "14/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.664392"}, {"id": "989a10362cd2844feac108d2c4a9514c", "title": "Digital Program Specialist - IT Risk and Program Management Base in Beijing - Asian Infrastructure Investment Bank", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Digital Program Specialist - IT Risk and Program Management The Asian Infrastructure Investment Bank (AIIB) is a multilateral development bank whose mission is Financing Infrastructure for Tomorrow in Asia and beyond - infrastructure with sustainabil", "url": "https://www.reed.co.uk/jobs/56470857", "date_posted": "14/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:15.535425"}, {"id": "edbef1d532515d0c730e831547ff0426", "title": "Speech & Language Therapist", "company": "The Guardian", "company_slug": "the-guardian", "location": "London", "salary_str": "", "salary_val": 0, "description": "Speech &amp; Language Therapist Location: London School: (Specialist Primary &amp; Secondary Provision) Salary: NHS Band 5 (Scale 1) – Competitive, in line with NHS pay scales Contract: Permanent | Full-Time | Term Time Only Are you a newly qualified", "url": "https://www.reed.co.uk/jobs/56638304", "date_posted": "13/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:48.354253"}, {"id": "bb51e789ae3cca300d39d0a42318607b", "title": "Junior Product Analyst", "company": "Reed.co.uk", "company_slug": "reed-co-uk", "location": "West End, WC2B 5LX", "salary_str": "£32,000 - £40,000", "salary_val": 32000, "description": "Reed Online is looking for a Junior Product Analyst to join their team in Holborn, London. Overview We’re looking for a Junior Product Analyst to join our Analytics team. You’ll help track KPIs, build dashboards, and analyse customer behaviour across", "url": "https://www.reed.co.uk/jobs/56468403", "date_posted": "13/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.751021"}, {"id": "2210f667b41885191900c096e0e12034", "title": "Junior Risk Manager", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "100,000 GBP Sign-On EOY Bonus Onsite WORKING Location: Central London, Greater London - United Kingdom Type: Permanent Our client is a global investment management firm that utilizes a diversified portfolio of systematic and quantitative strategies a", "url": "https://www.reed.co.uk/jobs/56465301", "date_posted": "13/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.751898"}, {"id": "7b9a172f6a335f1e7d6f8b4a12c98294", "title": "Graduate consulting analyst - private equity", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Working with clients across Europe, you will be responsible for supporting projects to drive operational improvements within investment firms. These projects usually involve working with significant amounts of financial data and typically centre arou", "url": "https://www.reed.co.uk/jobs/56470250", "date_posted": "13/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.658896"}, {"id": "4e6519ff6cbe8bf24d8f823811dd0d51", "title": "Junior Discretionary Trader", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "120,000 GBP 70,000 Onsite WORKING Location: Central London, Greater London - United Kingdom Type: Permanent Overview My client is a global investment management firm that utilizes a diversified portfolio of systematic and quantitative strategies acro", "url": "https://www.reed.co.uk/jobs/56465294", "date_posted": "13/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:11.778633"}, {"id": "09394ca7c65dea1dabcb0475c16e70ea", "title": "Data Scientist & Engineer", "company": "Gails", "company_slug": "gails", "location": "North West London, NW1 8QH", "salary_str": "", "salary_val": 0, "description": "ABOUT THE ROLE Develop advanced analytics / data science solutions to solve problems focused on forecasting, new site selection, ordering, production, rota scheduling, logistics and online services optimisation. Extend functionality of our Bread GPT ", "url": "https://www.reed.co.uk/jobs/56635068", "date_posted": "12/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:20.866822"}, {"id": "6d391135f571283df853de0fa2e1d70b", "title": "Portfolio Strategy Analyst", "company": "Virgin Money", "company_slug": "virgin-money", "location": "London", "salary_str": "£39,200 - £49,000", "salary_val": 39200, "description": "Business Unit: Group Unsecured Lending Salary range: 39,200 - 49,000 per annum DOE Benefits Location: &nbsp;UK Hybrid - Glasgow, Edinburgh, Leeds, Gosforth, Chester, London Contract type : Permanent &nbsp; Our Team We're looking for a talented analys", "url": "https://www.reed.co.uk/jobs/56633045", "date_posted": "12/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.657517"}, {"id": "057d67d650d1435531042b007bc47593", "title": "Graduate Investment Analyst", "company": "Broadstone", "company_slug": "broadstone", "location": "London", "salary_str": "£33,000 - £33,000", "salary_val": 33000, "description": "Broadstone have an exciting opportunity for a Graduate Investment Analyst to join the team. Location: London, EC2V 7AN Salary: Up to 33k per annum Start date: September 2026 Who are we? Broadstone is a thriving consultancy offering a wide range of se", "url": "https://www.reed.co.uk/jobs/56636525", "date_posted": "12/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.657692"}, {"id": "d7b3f6ae189adcf5aae8d9e9eb06ccef", "title": "Laboratory Quality Manager", "company": "HCA Healthcare UK", "company_slug": "hca-healthcare-uk", "location": "West End, WC1E 6JA", "salary_str": "", "salary_val": 0, "description": "Laboratory Quality Manager London, HCA Laboratories Full time: 37.5 hours per week Permanent Salary: Up to 60,000 dependent on experience We looking for a Quality Manager to join our Laboratory team at HCA Laboratories. Duties and Responsibilities En", "url": "https://www.reed.co.uk/jobs/56623553", "date_posted": "10/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:40.869089"}, {"id": "fdc6ac08e010cc0040043ddefd52c1b8", "title": "Python Engineer - Crypto- Global Quant Firm", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Salary: 200k bonus Summary One of the largest global HFT funds looking for a highly proactive engineer to join their rapidly expanding crypto division as they help shape the future of the industry. In this role, you will develop a deep understanding ", "url": "https://www.reed.co.uk/jobs/56609545", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:22.703889"}, {"id": "48fe05d3a5da8d07052a90b6099bc855", "title": "Infrastructure Debt Advisory Associate - Jefferies", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Position Overview: As an Investment Banking Associate in Jefferies’ Infrastructure Debt Advisory team, you will work on high-impact, large-scale infrastructure projects across sectors like energy, transportation, utilities, telecom, and renewables. T", "url": "https://www.reed.co.uk/jobs/56608475", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.755694"}, {"id": "0f8fc45972bc326e3d5a65336f390243", "title": "Private Client Advice Business Assurance Analyst - Fisher Investments", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Fisher Investments Europe is looking for an experienced suitability reviewer to join an internal business assurance team. The Opportunity: The PCA group provides regulated financial and investment advice to potential clients and all existing clients ", "url": "https://www.reed.co.uk/jobs/56608593", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.662119"}, {"id": "aad2c524decbc4e98996a942988af906", "title": "Major Banks - Corporate Banking Analyst", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Does work on strategy cases with the likes of Goldman, JPM and Citi sound interesting? Also the chance to join a 'start up' culture, backed by a tier 1 strategy name? A global team working on projects across corporate banking are looking for their ne", "url": "https://www.reed.co.uk/jobs/56608622", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.664130"}, {"id": "e5efd60a8a092231f4b5fe7fc20f8c54", "title": "Market Regulation Analyst - Intercontinental Exchange", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Job Purpose The Market Regulation Analyst supports the ICE Futures Europe (IFEU) Market Regulation department in meeting its regulatory obligations by leveraging advanced data skills to enhance market surveillance and compliance controls. This data-d", "url": "https://www.reed.co.uk/jobs/56608635", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.666252"}, {"id": "7f4aa120751275d5282b01628f4e62e3", "title": "Graduate Quantitative Analyst Entry Level", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "60,000 - 70,000 GBP performance related bonuses. Onsite WORKING Location: Central London, Greater London - United Kingdom Type: Permanent The client is a renowned Systematic Hedge Fund with offices in London, Paris, New York, Hong Kong and Singapore.", "url": "https://www.reed.co.uk/jobs/56608529", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:30.926649"}, {"id": "303da5daf01932699ca0b99c8d8282e2", "title": "Structured Credit Quant Research VP - Morgan McKinley", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "The Global Markets Quantitative Research division is in charge of the modelling, pricing &amp; risk management developments for Global Markets products. Role holders within the division focus on the global management, development, delivery, maintenan", "url": "https://www.reed.co.uk/jobs/56609122", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:34.689534"}, {"id": "d42a60fc03d70de219dc9c8610865a80", "title": "UK Commercial Bank - Industrials Associate AVP - Citi", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Discover your future at Citi Working at Citi is far more than just a job. A career with us means joining a team of more than 230,000 dedicated people from around the globe. At Citi, you'll have the opportunity to grow your career, give back to your c", "url": "https://www.reed.co.uk/jobs/56608581", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.644588"}, {"id": "0a1d4f0691fcb4a4fb4d2c93b2b4e85b", "title": "Equity Research Associate - Bernstein Autonomous Research", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Bernstein, Autonomous Research - CEEMEA Financials We have an opening for a Research Associate in our highly-ranked Autonomous Research team, covering CEEMEA Financials. Our industry teams are typically only a few professionals in number, and you wil", "url": "https://www.reed.co.uk/jobs/56608931", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.650124"}, {"id": "e75f8f65e6653c7dec2b5cf14bb16da3", "title": "Associate, Discretionary Investment Specialists - Man Group plc", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "About Man Group Man Group is a global alternative investment management firm focused on pursuing outperformance for sophisticated clients via our Systematic, Discretionary and Solutions offerings. Powered by talent and advanced technology, our single", "url": "https://www.reed.co.uk/jobs/56608675", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.655405"}, {"id": "ea16aeda100b2444698815372670a8e3", "title": "Project Manager", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Contract inside IR35, 3 days in office in London. Duration: 12 months Daily rate up to 900 inside IR35 Job Summary Primary Responsibilities Assists the business with defining the scope and milestones of projects to ensure timely delivery. Project Pla", "url": "https://www.reed.co.uk/jobs/56608897", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.665825"}, {"id": "1fb54ccc007eb95085f87fba47084e57", "title": "C/C++ Core Systems- Innovative Algo Trading", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Salary: 200k bonus Summary Not your traditional HFT firm, this company takes a scientific approach to trading financial products. They're looking for a modern C engineer to help drive their expansion into the EU, US and APAC markets. A community of s", "url": "https://www.reed.co.uk/jobs/56608901", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:05.715533"}, {"id": "64437a0121991373d3765c07d1f15410", "title": "Analyst, Quantitative Research - Intercontinental Exchange", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Job Purpose The Quantitative Analyst will join the Global Quantitative Research Group, which designs, implements, and supports enterprise quantitative models and systems. This role blends quantitative research and data science, focusing on model deve", "url": "https://www.reed.co.uk/jobs/56609669", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.927830"}, {"id": "8e5d1ef49403ea63e8eb60a2cf99712e", "title": "Finance Analyst - Financial Services - Michael Page", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Ambitious wealth management business at an exciting phase of their growth - London based. Description The ideal candidate will have: Proficiency in financial modelling and analysis within the Financial Services industry. Strong financial, corporate f", "url": "https://www.reed.co.uk/jobs/56609724", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.932348"}, {"id": "4f8beb376947102463d487f1b00c586e", "title": "External Custody Analyst - SEI Investments Europe Ltd.", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "SEI is seeking to hire an External Custody Analyst. You will play a key part in the team ensuring accurate administration and processing. You will enter trades, monitor trade flows and ensure timely execution of client trades as well as provide fast ", "url": "https://www.reed.co.uk/jobs/56609459", "date_posted": "09/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.935941"}, {"id": "b9fa90fd6f130b23853b4550df6aa705", "title": "Executive Search Consultant – Graduate", "company": "Virtus Talent", "company_slug": "virtus-talent", "location": "City of London, EC3A 6AP", "salary_str": "£32,500 - £50,000", "salary_val": 32500, "description": "Package: 30K- 35K Basic + Uncapped Commission + Benefits ( 40K OTE Year 1) ( 50K Year 2) 70K Year 3) Kick-start your career in executive search with a high-growth, sociable, and rewarding environment! Are you ambitious, driven, and eager to break int", "url": "https://www.reed.co.uk/jobs/56444082", "date_posted": "09/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:22.703497"}, {"id": "148d7b4571d72d1f8db44c613f6430bb", "title": "Digital Program Specialist - AI & Innovation Platform Base in Beijing - Asian Infrastructure Investment Bank", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Digital Program Specialist - AI &amp; Innovation Platform The Asian Infrastructure Investment Bank (AIIB) is a multilateral development bank whose mission is financing Infrastructure for Tomorrow in Asia and beyond - infrastructure with sustainabilit", "url": "https://www.reed.co.uk/jobs/56448285", "date_posted": "09/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:15.513435"}, {"id": "084874253d771cc690e04e3e960035cf", "title": "Graduate Flood Risk and Drainage Consultant", "company": "SME Graduate Employment Ltd", "company_slug": "sme-graduate-employment-ltd", "location": "London", "salary_str": "£28,000 - £30,000", "salary_val": 28000, "description": "If you’re reading this you will probably know that Floods can cause a lot of problems for people and properties. This is your chance to help prevent this. You’ll be looking at Flood Risk Assessments and Sustainable drainage design for new development", "url": "https://www.reed.co.uk/jobs/56448056", "date_posted": "09/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:17.439937"}, {"id": "50fd4cf7b6170c26949a98d1579ba2ce", "title": "Product Manager - A.M. Best Europe - Rating Services Ltd", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Overview The Product Manager is responsible for the development of AM Best Information Services (AMBEIS) Products &amp; Services. This role is responsible for planning and executing product plans and roadmaps for existing and new products under its r", "url": "https://www.reed.co.uk/jobs/56442140", "date_posted": "08/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.640470"}, {"id": "f4df9f113306453b8bca83f574046acb", "title": "Protection Administrator (Financial Services)", "company": "Your Resourcing Partner Limited", "company_slug": "your-resourcing-partner-limited", "location": "City of London, EC2V 5DE", "salary_str": "£25,000 - £30,000", "salary_val": 25000, "description": "We have an excellent opportunity to join an established St. James’s Place Wealth Management practice as a Protection Administrator, to support a Specialist Protection financial adviser within the team based in the Moorgate, London on a full-time basi", "url": "https://www.reed.co.uk/jobs/56440556", "date_posted": "07/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.633238"}, {"id": "fb4bcf00526c353b617b17065ce06ff2", "title": "SOC Analyst - Berenberg Bank", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "For our Innovation &amp; Technology department in London we are looking to hire a: SOC Analyst* Innovation &amp; Technology @ Berenberg In an era where digitalisation and modern IT infrastructure is revolutionizing banking, we are shaping a technolog", "url": "https://www.reed.co.uk/jobs/56440157", "date_posted": "07/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.938035"}, {"id": "b6398a52081a0d1cc1ef1c5c9527378b", "title": "Trainee Estate Agent", "company": "Turner Wise", "company_slug": "turner-wise", "location": "South West London, SW11 1AH", "salary_str": "£22,000 - £50,000", "salary_val": 22000, "description": "Job Title: Trainee Estate Agent / Negotiator Location: London Salary: 22,000k basic + 50,000k OTE first year (Depending on Experience) Job Type: Full-time, permanent Estate agency is a fast-paced, rewarding career where ambitious individuals can quic", "url": "https://www.reed.co.uk/jobs/56589496", "date_posted": "06/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:44.595238"}, {"id": "f19af6d1fe048274f40a528a85b13bd6", "title": "Trainee Estate Agent- £50,000 OTE - Training Provided", "company": "Turner Wise", "company_slug": "turner-wise", "location": "South West London, SW11 1AF", "salary_str": "£22,000 - £50,000", "salary_val": 22000, "description": "Job Title: Trainee Estate Agent / Negotiator Location: London Salary: 22,000 – 25,000 basic + 50,000 OTE first year (Depending on experience) Job Type: Full-time, permanent Estate agency is a fast-paced, rewarding career where ambitious individuals c", "url": "https://www.reed.co.uk/jobs/56589489", "date_posted": "06/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:44.595531"}, {"id": "ee183f6947a5fcaf7dc23cb6c35ffe4e", "title": "Trainee Data Analyst", "company": "The Guardian", "company_slug": "the-guardian", "location": "South East London, SE18 6HQ", "salary_str": "£30,000 - £65,000", "salary_val": 30000, "description": "Trainee Data Analyst – No Experience Needed Build a future-proof career in Data &amp; AI – starting today. Artificial Intelligence runs on data — and businesses are crying out for professionals who can collect, analyse, and interpret it. Looking for ", "url": "https://www.reed.co.uk/jobs/56581178", "date_posted": "05/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.751194"}, {"id": "ef8c048776fdb0f474621797246b96e0", "title": "Graduate Data Analyst", "company": "Ashdown Group", "company_slug": "ashdown-group", "location": "London", "salary_str": "£33,000 - £35,000", "salary_val": 33000, "description": "A well-established business is looking for a Graduate Data Analyst to join its team, based in London. Please note that this role requires the chosen candidate to be based in the office 5 days per week. In order to be suitable for this role, you must&", "url": "https://www.reed.co.uk/jobs/56580198", "date_posted": "04/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.657649"}, {"id": "7a1ded78110ec843415b0316efc3b456", "title": "Cyber Security Incident Response CSIRT Specialist", "company": "Appcast Enterprise", "company_slug": "appcast-enterprise", "location": "Sunbury-on-Thames", "salary_str": "", "salary_val": 0, "description": "Entity: Technology Job Family Group: IT&amp;S Group Job Description: Our purpose is to deliver energy to the world, today and tomorrow. For over 100 years, bp has focused on discovering, developing, and producing oil and gas in the nations where we o", "url": "https://www.reed.co.uk/jobs/56575071", "date_posted": "04/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:15.537072"}, {"id": "fd668b4116875f6079553e661d9ce6bf", "title": "Onsite Software Support Specialist", "company": "Brock Solutions", "company_slug": "brock-solutions", "location": "Twickenham, TW6 1EW", "salary_str": "", "salary_val": 0, "description": "Brock Solutions is an innovative engineering solutions and professional services company specializing in the design, build and implementation of real-time operational solutions for broad based industrial/manufacturing and transportation/logistics org", "url": "https://www.reed.co.uk/jobs/56427857", "date_posted": "04/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:26.657732"}, {"id": "39a366b1430477d218852f77ddcbf860", "title": "Industry Specialist", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "About the Role: Grade Level (for internal use): 10 The Team: Within the S&amp;P Global Market Intelligence Data &amp; Research organization, Product Specialists are expected to identify, analyze, and propose solutions relating to specific products an", "url": "https://www.reed.co.uk/jobs/56420876", "date_posted": "04/02/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:46.425209"}, {"id": "0907e011cb7078084202870e4e4a2cb4", "title": "Civil Design Engineer - Operations T&E", "company": "NG Bailey", "company_slug": "ng-bailey", "location": "London", "salary_str": "", "salary_val": 0, "description": "Civil Design Engineer Scotland - (Hybrid, Office, Site) Permanent Competitive Salary Car/Car Allowance Flexible Benefits Summary Are you an experienced Civil Engineer with a passion for civil engineering and the energy sector? Freedom Professional Se", "url": "https://www.reed.co.uk/jobs/55869174", "date_posted": "03/10/2025", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:20.866893"}, {"id": "870b47bd8f38c5b33060423ee83242e4", "title": "Graduate Executive Search", "company": "Virtus Talent", "company_slug": "virtus-talent", "location": "West End, WC1A 2NJ", "salary_str": "£32,500 - £50,000", "salary_val": 32500, "description": "Package: 30K- 35K Basic + Uncapped Commission + Benefits ( 40K OTE Year 1) ( 50K Year 2) 70K Year 3) Kick-start your career in executive search with a high-growth, sociable, and rewarding environment! Are you ambitious, driven, and eager to break int", "url": "https://www.reed.co.uk/jobs/56569061", "date_posted": "03/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:22.702941"}, {"id": "4c30b727c24ff84442d2630745bfff3f", "title": "Credit Analyst - Vice President - Tikehau Investment Management - Annonces", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "Responsibilities: Primary activities will include, but not be limited to, research of potential investments across leverage finance (Broadly Syndicated Loans and High Yield bonds): Act as the credit research analyst responsible for credit investments", "url": "https://www.reed.co.uk/jobs/56558827", "date_posted": "02/03/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:24.753249"}, {"id": "e26a4c54533a4e03a58d56bb7b3e1522", "title": "Product Manager - Private Credit", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "At Broadridge, we've built a culture where the highest goal is to empower others to accomplish more. If you're passionate about developing your career, while helping others along the way, come join the Broadridge team. Role Overview: Broadridge is st", "url": "https://www.reed.co.uk/jobs/56265682", "date_posted": "01/01/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:22:36.635944"}, {"id": "90b5dd8933fce5b2a9632731ae11405b", "title": "Quantitative Analyst", "company": "eFinancialCareers", "company_slug": "efinancialcareers", "location": "London", "salary_str": "", "salary_val": 0, "description": "At Broadridge, we've built a culture where the highest goal is to empower others to accomplish more. If you're passionate about developing your career, while helping others along the way, come join the Broadridge team. Broadridge Asset Management Sol", "url": "https://www.reed.co.uk/jobs/56265670", "date_posted": "01/01/2026", "source": "Reed", "contract_type": "", "is_new": true, "cv_score": 0, "first_seen": "2026-03-16T00:23:07.922327"}];
+    const TREND_DATA = [{"date": "2026-03-16", "total": 99, "new": 99}];
+    const HAS_CV = false;
+
+    // ---- Local Storage for job statuses ----
+    function getStatuses() {
+        try { return JSON.parse(localStorage.getItem('jh_statuses') || '{}'); } catch { return {}; }
+    }
+    function saveStatuses(s) { localStorage.setItem('jh_statuses', JSON.stringify(s)); }
+
+    function setJobStatus(jobId, status) {
+        const s = getStatuses();
+        if (s[jobId] === status) { delete s[jobId]; } else { s[jobId] = status; }
+        saveStatuses(s);
+        renderJobs();
+        updateAppliedCount();
+        showToast(s[jobId] ? `Marked as ${status}` : 'Status cleared');
+    }
+
+    function updateAppliedCount() {
+        const s = getStatuses();
+        const count = Object.values(s).filter(v => v === 'applied').length;
+        document.getElementById('appliedCount').textContent = count;
+    }
+
+    // ---- Theme ----
+    function toggleTheme() {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('jh_theme', next);
+        updateThemeIcon(next);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('themeIcon');
+        if (theme === 'light') {
+            icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+        } else {
+            icon.innerHTML = '<path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>';
+        }
+    }
+
+    // ---- Toast ----
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    // ---- Filtering ----
+    let currentFilter = 'all';
+    let hideApplied = false;
+
+    function setFilter(filter, btn) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+    }
+
+    function toggleHideApplied() {
+        hideApplied = !hideApplied;
+        document.getElementById('hideAppliedBtn').classList.toggle('active', hideApplied);
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const sort = document.getElementById('sortSelect').value;
+        const statuses = getStatuses();
+        let filtered = JOBS.filter(job => {
+            const text = `${job.title} ${job.company} ${job.description} ${job.location}`.toLowerCase();
+            const matchesSearch = !search || text.includes(search);
+            const status = statuses[job.id] || '';
+
+            let matchesFilter = true;
+            if (currentFilter === 'new') matchesFilter = job.is_new;
+            else if (currentFilter === 'saved') matchesFilter = status === 'saved';
+            else if (currentFilter === 'applied') matchesFilter = status === 'applied';
+            else if (currentFilter !== 'all') matchesFilter = job.source === currentFilter;
+
+            if (hideApplied && (status === 'applied' || status === 'rejected')) return false;
+            return matchesSearch && matchesFilter;
+        });
+
+        // Sort
+        filtered.sort((a, b) => {
+            if (sort === 'date') return (b.date_posted || '').localeCompare(a.date_posted || '');
+            if (sort === 'salary-high') return (b.salary_val || 0) - (a.salary_val || 0);
+            if (sort === 'salary-low') return (a.salary_val || 0) - (b.salary_val || 0);
+            if (sort === 'company') return (a.company || '').localeCompare(b.company || '');
+            if (sort === 'cv-match') return (b.cv_score || 0) - (a.cv_score || 0);
+            if (sort === 'deadline') {
+                const daysA = daysSincePosted(a.date_posted);
+                const daysB = daysSincePosted(b.date_posted);
+                return daysB - daysA; // oldest first (closest to expiry)
+            }
+            return 0;
+        });
+
+        renderJobList(filtered);
+        document.getElementById('resultsCount').innerHTML = `Showing <strong>${filtered.length}</strong> jobs`;
+    }
+
+    // ---- Deadline calculation ----
+    function daysSincePosted(dateStr) {
+        if (!dateStr) return 0;
+        const posted = new Date(dateStr);
+        const now = new Date();
+        return Math.floor((now - posted) / (1000 * 60 * 60 * 24));
+    }
+
+    function deadlineBadge(dateStr) {
+        const days = daysSincePosted(dateStr);
+        const remaining = 30 - days;
+        if (remaining <= 3) return `<span class="deadline-badge deadline-urgent">Closes in ~${Math.max(0, remaining)}d</span>`;
+        if (remaining <= 10) return `<span class="deadline-badge deadline-soon">~${remaining}d left</span>`;
+        return `<span class="deadline-badge deadline-ok">~${remaining}d left</span>`;
+    }
+
+    // ---- CV Match bar ----
+    function cvMatchHTML(score) {
+        if (!HAS_CV || score === 0) return '';
+        const cls = score >= 60 ? 'high' : score >= 30 ? 'med' : 'low';
+        return `<div class="cv-match"><div class="cv-bar-bg"><div class="cv-bar ${cls}" style="width:${score}%"></div></div><span class="cv-label">${score}% CV match</span></div>`;
+    }
+
+    // ---- Render ----
+    function renderJobList(jobs) {
+        const statuses = getStatuses();
+        const list = document.getElementById('jobList');
+        list.innerHTML = jobs.map(job => {
+            const status = statuses[job.id] || '';
+            const statusClass = status ? `status-${status}` : '';
+            const newClass = job.is_new ? 'new' : '';
+            const salaryHTML = job.salary_str
+                ? `<span class="job-salary">${job.salary_str}</span>`
+                : '<span class="job-salary unknown">Salary unlisted</span>';
+
+            const companyEncoded = encodeURIComponent(job.company);
+            const glassdoorUrl = `https://www.glassdoor.co.uk/Reviews/${companyEncoded}-Reviews-E_IE0.htm`;
+            const linkedinUrl = `https://www.linkedin.com/company/${job.company_slug}`;
+            const googleUrl = `https://www.google.com/search?q=${companyEncoded}+company`;
+
+            return `
+            <div class="job-card ${newClass} ${statusClass}" data-id="${job.id}">
+                <div class="job-card-top">
+                    <div>
+                        <div class="job-title">${escapeHTML(job.title)}</div>
+                        <div class="job-company">${escapeHTML(job.company)}</div>
+                        <div class="company-links">
+                            <a href="${glassdoorUrl}" target="_blank" class="company-link">Glassdoor</a>
+                            <a href="${linkedinUrl}" target="_blank" class="company-link">LinkedIn</a>
+                            <a href="${googleUrl}" target="_blank" class="company-link">Google</a>
+                        </div>
+                    </div>
+                    ${salaryHTML}
+                </div>
+                <div class="job-meta">
+                    <span class="job-meta-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
+                        ${job.location}
+                    </span>
+                    <span class="job-meta-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+                        ${job.date_posted}
+                    </span>
+                    ${deadlineBadge(job.date_posted)}
+                </div>
+                ${cvMatchHTML(job.cv_score)}
+                <div class="job-desc">${escapeHTML(job.description)}</div>
+                <div class="job-footer">
+                    <div class="job-tags">
+                        <span class="tag tag-source">${job.source}</span>
+                        ${job.is_new ? '<span class="tag tag-new">NEW</span>' : ''}
+                        ${job.contract_type ? `<span class="tag tag-type">${job.contract_type}</span>` : ''}
+                        <div class="status-btns">
+                            <button class="status-btn ${status === 'saved' ? 'saved' : ''}" onclick="setJobStatus('${job.id}', 'saved')">Save</button>
+                            <button class="status-btn ${status === 'applied' ? 'applied' : ''}" onclick="setJobStatus('${job.id}', 'applied')">Applied</button>
+                            <button class="status-btn ${status === 'rejected' ? 'rejected' : ''}" onclick="setJobStatus('${job.id}', 'rejected')">Not Interested</button>
+                        </div>
+                    </div>
+                    <a href="${job.url}" target="_blank" class="apply-btn">
+                        Apply
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                    </a>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderJobs() { applyFilters(); }
+
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    // ---- CSV Export ----
+    function exportCSV() {
+        const statuses = getStatuses();
+        const NL = String.fromCharCode(10);
+        let csv = 'Title,Company,Location,Salary,Date Posted,Source,Status,URL' + NL;
+        JOBS.forEach(j => {
+            const status = statuses[j.id] || 'new';
+            const clean = s => (s||'').replace(/"/g, "'");
+            csv += '"' + clean(j.title) + '","' + clean(j.company) + '","' + j.location + '","' + j.salary_str + '","' + j.date_posted + '","' + j.source + '","' + status + '","' + j.url + '"' + NL;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `london-jobs-${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        showToast('CSV downloaded!');
+    }
+
+    // ---- CV Upload (client-side text extraction) ----
+    function handleCVUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result.toLowerCase();
+            const re = new RegExp('[a-z]{3,}', 'g');
+            const words = text.match(re) || [];
+            const stopWords = new Set(['the','and','for','are','but','not','you','all','can','had','was','one','our','has','have','been','will','with','this','that','from','they','were','which','their','would','there','about','into','more','other','than','them','these','some','also','what','when','where']);
+            const counts = {};
+            words.forEach(w => { if (!stopWords.has(w)) counts[w] = (counts[w]||0) + 1; });
+            const keywords = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,80).map(e => e[0]);
+            localStorage.setItem('jh_cv_keywords', JSON.stringify(keywords));
+            // Re-score jobs
+            JOBS.forEach(j => {
+                const jtext = `${j.title} ${j.description}`.toLowerCase();
+                const matches = keywords.filter(kw => jtext.includes(kw)).length;
+                j.cv_score = Math.min(100, Math.floor((matches / keywords.length) * 300));
+            });
+            showToast(`CV loaded! ${keywords.length} keywords extracted`);
+            applyFilters();
+        };
+        reader.readAsText(file);
+    }
+
+    // ---- Trend Chart (Canvas) ----
+    function drawTrend() {
+        const canvas = document.getElementById('trendCanvas');
+        if (!canvas || TREND_DATA.length < 2) return;
+        const ctx = canvas.getContext('2d');
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = 120;
+        const w = canvas.width;
+        const h = canvas.height;
+        const padding = { top: 15, bottom: 25, left: 10, right: 10 };
+        const chartW = w - padding.left - padding.right;
+        const chartH = h - padding.top - padding.bottom;
+        const maxVal = Math.max(...TREND_DATA.map(d => d.total), 1);
+        const barW = Math.max(8, Math.min(40, chartW / TREND_DATA.length - 4));
+        const gap = (chartW - barW * TREND_DATA.length) / (TREND_DATA.length + 1);
+
+        // Clear
+        ctx.clearRect(0, 0, w, h);
+
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        const green = getComputedStyle(document.documentElement).getPropertyValue('--green').trim();
+        const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+
+        TREND_DATA.forEach((d, i) => {
+            const x = padding.left + gap + i * (barW + gap);
+            const barH = (d.total / maxVal) * chartH;
+            const y = padding.top + chartH - barH;
+
+            // Total bar
+            ctx.fillStyle = accent;
+            ctx.beginPath();
+            ctx.roundRect(x, y, barW, barH, 3);
+            ctx.fill();
+
+            // New jobs overlay
+            if (d.new > 0) {
+                const newH = (d.new / maxVal) * chartH;
+                ctx.fillStyle = green;
+                ctx.beginPath();
+                ctx.roundRect(x, padding.top + chartH - newH, barW, newH, 3);
+                ctx.fill();
+            }
+
+            // Value label
+            ctx.fillStyle = muted;
+            ctx.font = '10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(d.total, x + barW/2, y - 4);
+
+            // Date label
+            ctx.fillText(d.date.slice(5), x + barW/2, h - 4);
+        });
+    }
+
+    // ---- Init ----
+    (function init() {
+        // Theme
+        const savedTheme = localStorage.getItem('jh_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+
+        // Load CV keywords from localStorage if uploaded in browser
+        const savedCVKeywords = localStorage.getItem('jh_cv_keywords');
+        if (savedCVKeywords && !HAS_CV) {
+            try {
+                const keywords = JSON.parse(savedCVKeywords);
+                JOBS.forEach(j => {
+                    const jtext = `${j.title} ${j.description}`.toLowerCase();
+                    const matches = keywords.filter(kw => jtext.includes(kw)).length;
+                    j.cv_score = Math.min(100, Math.floor((matches / keywords.length) * 300));
+                });
+            } catch {}
+        }
+
+        updateAppliedCount();
+        renderJobs();
+        drawTrend();
+        window.addEventListener('resize', drawTrend);
+    })();
+    </script>
+</body>
+</html>
