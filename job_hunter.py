@@ -18,6 +18,7 @@ import base64
 import ssl
 import re
 import csv
+import html as html_module
 import certifi
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
@@ -218,6 +219,42 @@ def get_reed_detail_url(job_id_num):
 # Filtering & Deduplication
 # ============================================================
 
+def clean_text(text):
+    """Decode HTML entities and clean up text."""
+    if not text:
+        return ""
+    text = html_module.unescape(text)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+def is_london_location(location):
+    """Check if a location is actually in/near London."""
+    if not location:
+        return True
+    loc = location.lower()
+    london_terms = ["london", "city of london", "west end", "canary wharf",
+                    "shoreditch", "westminster", "camden", "islington", "hackney",
+                    "tower", "southwark", "lambeth", "greenwich", "kensington",
+                    "chelsea", "hammersmith", "wandsworth", "richmond", "croydon",
+                    "bromley", "barnet", "east london", "west london", "north london",
+                    "south london", "south east london", "south west london",
+                    "north west london"]
+    if any(term in loc for term in london_terms):
+        return True
+    postcode_match = re.match(r'^([A-Z]{1,2})\d', loc.upper())
+    if postcode_match and postcode_match.group(1) in LONDON_POSTCODES:
+        return True
+    reject_terms = ["emea", "global", "europe", "worldwide", "usa", "us ",
+                    "united states", "apac", "americas", "international"]
+    if any(term in loc for term in reject_terms):
+        return False
+    if "remote" in loc:
+        return True
+    return True
+
+
 def is_excluded(job):
     """Check if a job should be excluded."""
     text = f"{job.get('title', '')} {job.get('company', '')} {job.get('description', '')}".lower()
@@ -231,6 +268,8 @@ def is_excluded(job):
             return True
     salary = job.get("salary_max") or job.get("salary_min") or 0
     if salary and salary < MIN_SALARY:
+        return True
+    if not is_london_location(job.get("location", "")):
         return True
     return False
 
@@ -364,12 +403,12 @@ def search_adzuna(role):
             cleaned_redirect = re.sub(r'[?&]utm_[^&]*', '', re.sub(r'[?&]se=[^&]*', '', re.sub(r'[?&]v=[^&]*', '', raw_redirect)))
             resolved = resolve_url(cleaned_redirect) if cleaned_redirect else ""
             jobs.append({
-                "title": r.get("title", ""),
-                "company": r.get("company", {}).get("display_name", "Unknown"),
+                "title": clean_text(r.get("title", "")),
+                "company": clean_text(r.get("company", {}).get("display_name", "Unknown")),
                 "location": format_location(r.get("location", {}).get("display_name", LOCATION)),
                 "salary_min": r.get("salary_min"),
                 "salary_max": r.get("salary_max"),
-                "description": r.get("description", "")[:300],
+                "description": clean_text(r.get("description", ""))[:300],
                 "url": resolved or cleaned_redirect,
                 "date_posted": r.get("created", ""),
                 "source": "Adzuna",
@@ -412,12 +451,12 @@ def search_reed(role):
             # Try to get the employer's direct application URL
             direct_url = get_reed_detail_url(reed_id) if reed_id else None
             jobs.append({
-                "title": r.get("jobTitle", ""),
-                "company": r.get("employerName", "Unknown"),
+                "title": clean_text(r.get("jobTitle", "")),
+                "company": clean_text(r.get("employerName", "Unknown")),
                 "location": format_location(r.get("locationName", LOCATION)),
                 "salary_min": r.get("minimumSalary"),
                 "salary_max": r.get("maximumSalary"),
-                "description": r.get("jobDescription", "")[:300],
+                "description": clean_text(r.get("jobDescription", ""))[:300],
                 "url": direct_url or reed_page,
                 "reed_url": reed_page,
                 "date_posted": r.get("date", ""),
@@ -457,12 +496,12 @@ def search_jooble(role):
             salary_text = r.get("salary", "")
             s_min, s_max = parse_salary(salary_text)
             jobs.append({
-                "title": r.get("title", ""),
-                "company": r.get("company", "Unknown"),
+                "title": clean_text(r.get("title", "")),
+                "company": clean_text(r.get("company", "Unknown")),
                 "location": format_location(r.get("location", LOCATION)),
                 "salary_min": s_min,
                 "salary_max": s_max,
-                "description": (r.get("snippet", "") or "")[:300],
+                "description": clean_text(r.get("snippet", "") or "")[:300],
                 "url": r.get("link", ""),
                 "date_posted": r.get("updated", ""),
                 "source": "Jooble",
@@ -514,12 +553,12 @@ def search_findwork(role):
             if salary_text:
                 s_min, s_max = parse_salary(salary_text)
             jobs.append({
-                "title": r.get("role", ""),
-                "company": r.get("company_name", "Unknown"),
+                "title": clean_text(r.get("role", "")),
+                "company": clean_text(r.get("company_name", "Unknown")),
                 "location": format_location(r.get("location", LOCATION)),
                 "salary_min": s_min,
                 "salary_max": s_max,
-                "description": (r.get("text", "") or "")[:300],
+                "description": clean_text(r.get("text", "") or "")[:300],
                 "url": r.get("url", ""),
                 "date_posted": r.get("date_posted", ""),
                 "source": "Findwork",
@@ -570,12 +609,12 @@ def search_themuse(role):
             contents = r.get("contents", "") or ""
             s_min, s_max = parse_salary(contents[:500])
             jobs.append({
-                "title": title,
-                "company": company,
+                "title": clean_text(title),
+                "company": clean_text(company),
                 "location": format_location(loc_str),
                 "salary_min": s_min,
                 "salary_max": s_max,
-                "description": re.sub(r'<[^>]+>', '', contents)[:300],
+                "description": clean_text(contents)[:300],
                 "url": landing_url,
                 "date_posted": r.get("publication_date", ""),
                 "source": "The Muse",
@@ -627,8 +666,8 @@ def search_jobicy(role):
                 except (ValueError, TypeError):
                     pass
             jobs.append({
-                "title": title,
-                "company": r.get("companyName", "Unknown"),
+                "title": clean_text(title),
+                "company": clean_text(r.get("companyName", "Unknown")),
                 "location": format_location(r.get("jobGeo", "UK Remote")),
                 "salary_min": s_min,
                 "salary_max": s_max,
