@@ -4,8 +4,10 @@
 # Copy this file to config.py and fill in your API keys.
 #
 # Get your free API keys:
-#   Adzuna: https://developer.adzuna.com/
-#   Reed:   https://www.reed.co.uk/developers/jobseeker
+#   Adzuna:   https://developer.adzuna.com/
+#   Reed:     https://www.reed.co.uk/developers/jobseeker
+#   Jooble:   https://jooble.org/api/about
+#   Findwork: https://findwork.dev/developers/
 # ============================================================
 
 # ---- Adzuna API Credentials ----
@@ -14,6 +16,12 @@ ADZUNA_APP_KEY = "your_app_key_here"
 
 # ---- Reed API Credentials ----
 REED_API_KEY = "your_api_key_here"
+
+# ---- Jooble API Credentials (Optional - aggregates many job boards) ----
+JOOBLE_API_KEY = ""
+
+# ---- Findwork API Credentials (Optional - good for tech roles) ----
+FINDWORK_API_KEY = ""
 
 # ---- Email Settings (Optional) ----
 EMAIL_ENABLED = False
@@ -28,6 +36,7 @@ LOCATION = "London"
 MIN_SALARY = 28000
 MAX_SALARY = 60000
 DISTANCE_MILES = 15
+FULL_TIME_ONLY = True
 
 # ---- Roles to Search ----
 SEARCH_ROLES = [

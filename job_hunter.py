@@ -34,11 +34,21 @@ from config import (
     OUTPUT_DIR, JOBS_DB_FILE, HTML_REPORT_FILE,
 )
 
-# Try to import Jooble API key (optional)
+# Try to import optional API keys
 try:
     from config import JOOBLE_API_KEY
 except ImportError:
     JOOBLE_API_KEY = ""
+
+try:
+    from config import FINDWORK_API_KEY
+except ImportError:
+    FINDWORK_API_KEY = ""
+
+try:
+    from config import FINDWORK_API_KEY
+except ImportError:
+    FINDWORK_API_KEY = ""
 
 
 # ============================================================
@@ -82,6 +92,129 @@ def format_location(raw_location):
 
 
 # ============================================================
+# URL Resolution & Validation
+# ============================================================
+
+def resolve_url(url, timeout=10):
+    """Follow redirects to get the final destination URL (the actual job page)."""
+    if not url:
+        return url
+    try:
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        req = urllib.request.Request(url, method="HEAD")
+        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx))
+        resp = opener.open(req, timeout=timeout)
+        final_url = resp.url
+        resp.close()
+        return final_url
+    except urllib.error.HTTPError as e:
+        # Some servers don't support HEAD, try GET with no body read
+        if e.code in (405, 403):
+            try:
+                req = urllib.request.Request(url, method="GET")
+                req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
+                resp = opener.open(req, timeout=timeout)
+                final_url = resp.url
+                resp.close()
+                return final_url
+            except Exception:
+                return url
+        return url
+    except Exception:
+        return url
+
+
+def check_url_alive(url, timeout=10):
+    """Check if a URL is still accessible. Returns True unless we get a definitive 404/410."""
+    if not url:
+        return False
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+    }
+    ctx = ssl.create_default_context(cafile=certifi.where())
+    # Try HEAD first
+    for method in ("HEAD", "GET"):
+        try:
+            req = urllib.request.Request(url, method=method)
+            for k, v in headers.items():
+                req.add_header(k, v)
+            resp = urllib.request.urlopen(req, context=ctx, timeout=timeout)
+            resp.close()
+            return True  # Any successful response means it's alive
+        except urllib.error.HTTPError as e:
+            if e.code in (404, 410):
+                return False  # Definitively gone
+            if e.code in (403, 401, 405, 406, 429, 503):
+                return True  # Blocked but page exists (many sites block bots)
+        except Exception:
+            if method == "HEAD":
+                continue  # Try GET before giving up
+            return True  # Network errors = assume alive (don't remove on timeout)
+    return True  # Default to keeping the job
+
+
+def validate_and_clean_urls(db):
+    """Check stored job URLs. Only remove jobs with definitively dead links (404/410)."""
+    print("\n  Validating job URLs...")
+    dead_ids = []
+    checked = 0
+    total = len(db["jobs"])
+    for jid, job in list(db["jobs"].items()):
+        url = job.get("url", "")
+        if not url or url == "#":
+            dead_ids.append(jid)
+            continue
+        # Only validate URLs older than 3 days (new jobs are fresh)
+        first_seen = job.get("first_seen", "")
+        if first_seen:
+            try:
+                seen_dt = datetime.fromisoformat(first_seen)
+                if (datetime.now() - seen_dt).days < 3:
+                    continue
+            except (ValueError, TypeError):
+                pass
+        checked += 1
+        if checked % 20 == 0:
+            print(f"    Checked {checked}/{total} URLs...")
+        if not check_url_alive(url):
+            # Try resolving in case it's a stale redirect
+            resolved = resolve_url(url)
+            if resolved != url and check_url_alive(resolved):
+                db["jobs"][jid]["url"] = resolved
+            else:
+                dead_ids.append(jid)
+        time.sleep(0.3)  # Be polite to servers
+    if dead_ids:
+        for jid in dead_ids:
+            del db["jobs"][jid]
+        print(f"    Removed {len(dead_ids)} jobs with dead links (404/410)")
+    else:
+        print(f"    All {checked} checked URLs are live")
+    return dead_ids
+
+
+def get_reed_detail_url(job_id_num):
+    """Fetch Reed job details to get the employer's actual application URL."""
+    if not REED_API_KEY:
+        return None
+    try:
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        url = f"https://www.reed.co.uk/api/1.0/jobs/{job_id_num}"
+        credentials = base64.b64encode(f"{REED_API_KEY}:".encode()).decode()
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", f"Basic {credentials}")
+        with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        # externalUrl is the employer's actual application page
+        return data.get("externalUrl") or data.get("jobUrl") or None
+    except Exception:
+        return None
+
+
+# ============================================================
 # Filtering & Deduplication
 # ============================================================
 
@@ -91,7 +224,8 @@ def is_excluded(job):
     if any(kw in text for kw in EXCLUDE_KEYWORDS):
         return True
     if FULL_TIME_ONLY:
-        contract = (job.get("contract_type") or "").lower()
+        ct = job.get("contract_type") or ""
+        contract = (ct if isinstance(ct, str) else " ".join(ct) if isinstance(ct, list) else str(ct)).lower()
         title = job.get("title", "").lower()
         if "part time" in contract or "part-time" in contract or "part time" in title or "part-time" in title:
             return True
@@ -225,6 +359,10 @@ def search_adzuna(role):
         with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
             data = json.loads(resp.read().decode())
         for r in data.get("results", []):
+            # Resolve redirect URL to get the actual job page (career site, Workday, etc.)
+            raw_redirect = r.get("redirect_url", "")
+            cleaned_redirect = re.sub(r'[?&]utm_[^&]*', '', re.sub(r'[?&]se=[^&]*', '', re.sub(r'[?&]v=[^&]*', '', raw_redirect)))
+            resolved = resolve_url(cleaned_redirect) if cleaned_redirect else ""
             jobs.append({
                 "title": r.get("title", ""),
                 "company": r.get("company", {}).get("display_name", "Unknown"),
@@ -232,7 +370,7 @@ def search_adzuna(role):
                 "salary_min": r.get("salary_min"),
                 "salary_max": r.get("salary_max"),
                 "description": r.get("description", "")[:300],
-                "url": re.sub(r'[?&]utm_[^&]*', '', re.sub(r'[?&]se=[^&]*', '', re.sub(r'[?&]v=[^&]*', '', r.get("redirect_url", "")))),
+                "url": resolved or cleaned_redirect,
                 "date_posted": r.get("created", ""),
                 "source": "Adzuna",
                 "contract_type": r.get("contract_type", ""),
@@ -269,6 +407,10 @@ def search_reed(role):
         with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
             data = json.loads(resp.read().decode())
         for r in data.get("results", []):
+            reed_id = r.get("jobId", "")
+            reed_page = f"https://www.reed.co.uk/jobs/{reed_id}"
+            # Try to get the employer's direct application URL
+            direct_url = get_reed_detail_url(reed_id) if reed_id else None
             jobs.append({
                 "title": r.get("jobTitle", ""),
                 "company": r.get("employerName", "Unknown"),
@@ -276,12 +418,14 @@ def search_reed(role):
                 "salary_min": r.get("minimumSalary"),
                 "salary_max": r.get("maximumSalary"),
                 "description": r.get("jobDescription", "")[:300],
-                "url": f"https://www.reed.co.uk/jobs/{r.get('jobId', '')}",
+                "url": direct_url or reed_page,
+                "reed_url": reed_page,
                 "date_posted": r.get("date", ""),
                 "source": "Reed",
                 "contract_type": r.get("contractType", ""),
                 "category": r.get("jobTitle", ""),
             })
+            time.sleep(0.15)  # Rate limit for detail API calls
     except Exception as e:
         print(f"  [Reed] Error searching '{role}': {e}")
     return jobs
@@ -341,6 +485,163 @@ def parse_salary(text):
     elif len(nums) == 1:
         return nums[0], nums[0]
     return None, None
+
+
+# ============================================================
+# Findwork API (free tech jobs)
+# ============================================================
+
+def search_findwork(role):
+    """Search Findwork.dev for tech jobs (free API, good for tech roles)."""
+    if not FINDWORK_API_KEY:
+        return []
+    jobs = []
+    params = urllib.parse.urlencode({
+        "search": role,
+        "location": "london",
+        "sort_by": "date",
+    })
+    url = f"https://findwork.dev/api/jobs/?{params}"
+    try:
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", f"Token {FINDWORK_API_KEY}")
+        with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        for r in data.get("results", []):
+            s_min, s_max = None, None
+            salary_text = r.get("salary", "") or ""
+            if salary_text:
+                s_min, s_max = parse_salary(salary_text)
+            jobs.append({
+                "title": r.get("role", ""),
+                "company": r.get("company_name", "Unknown"),
+                "location": format_location(r.get("location", LOCATION)),
+                "salary_min": s_min,
+                "salary_max": s_max,
+                "description": (r.get("text", "") or "")[:300],
+                "url": r.get("url", ""),
+                "date_posted": r.get("date_posted", ""),
+                "source": "Findwork",
+                "contract_type": "Full Time" if not r.get("remote") else "Remote",
+                "category": r.get("keywords", [""])[0] if r.get("keywords") else "",
+            })
+    except Exception as e:
+        print(f"  [Findwork] Error searching '{role}': {e}")
+    return jobs
+
+
+# ============================================================
+# The Muse API (free, no auth needed, direct URLs)
+# ============================================================
+
+def search_themuse(role):
+    """Search The Muse for jobs (free API, no key needed, stable direct URLs)."""
+    jobs = []
+    params = urllib.parse.urlencode({
+        "category": "Data Science" if "data" in role.lower() else
+                    "Project Management" if "project" in role.lower() else
+                    "Business Operations" if "business" in role.lower() else
+                    "Customer Service" if "customer" in role.lower() or "success" in role.lower() else
+                    "IT",
+        "location": "London, United Kingdom",
+        "level": "Entry Level",
+        "page": 0,
+    })
+    url = f"https://www.themuse.com/api/public/jobs?{params}"
+    try:
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        req = urllib.request.Request(url)
+        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
+        with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        for r in data.get("results", []):
+            title = r.get("name", "")
+            # Filter by role keywords since Muse uses categories not keyword search
+            role_words = role.lower().split()
+            title_lower = title.lower()
+            if not any(w in title_lower for w in role_words if len(w) > 3):
+                continue
+            company = r.get("company", {}).get("name", "Unknown")
+            locations = r.get("locations", [])
+            loc_str = locations[0].get("name", "London") if locations else "London"
+            landing_url = r.get("refs", {}).get("landing_page", "")
+            # Extract salary from contents if present
+            contents = r.get("contents", "") or ""
+            s_min, s_max = parse_salary(contents[:500])
+            jobs.append({
+                "title": title,
+                "company": company,
+                "location": format_location(loc_str),
+                "salary_min": s_min,
+                "salary_max": s_max,
+                "description": re.sub(r'<[^>]+>', '', contents)[:300],
+                "url": landing_url,
+                "date_posted": r.get("publication_date", ""),
+                "source": "The Muse",
+                "contract_type": r.get("type", ""),
+                "category": (r.get("categories", [{}])[0].get("name", "") if r.get("categories") else ""),
+            })
+    except Exception as e:
+        print(f"  [The Muse] Error searching '{role}': {e}")
+    return jobs
+
+
+# ============================================================
+# Jobicy API (free, no auth, remote UK roles)
+# ============================================================
+
+def search_jobicy(role):
+    """Search Jobicy for remote UK jobs (free API, no key needed)."""
+    jobs = []
+    params = urllib.parse.urlencode({
+        "count": 20,
+        "geo": "uk",
+        "tag": role.split()[0].lower() if role.split() else "tech",
+    })
+    url = f"https://jobicy.com/api/v2/remote-jobs?{params}"
+    try:
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        req = urllib.request.Request(url)
+        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")
+        with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        for r in data.get("jobs", []):
+            title = r.get("jobTitle", "")
+            # Filter by role keywords
+            role_words = role.lower().split()
+            title_lower = title.lower()
+            if not any(w in title_lower for w in role_words if len(w) > 3):
+                continue
+            s_min, s_max = None, None
+            sal_text = r.get("annualSalaryMin", "")
+            if sal_text:
+                try:
+                    s_min = int(str(sal_text).replace(",", ""))
+                except (ValueError, TypeError):
+                    pass
+            sal_text = r.get("annualSalaryMax", "")
+            if sal_text:
+                try:
+                    s_max = int(str(sal_text).replace(",", ""))
+                except (ValueError, TypeError):
+                    pass
+            jobs.append({
+                "title": title,
+                "company": r.get("companyName", "Unknown"),
+                "location": format_location(r.get("jobGeo", "UK Remote")),
+                "salary_min": s_min,
+                "salary_max": s_max,
+                "description": (r.get("jobExcerpt", "") or "")[:300],
+                "url": r.get("url", ""),
+                "date_posted": r.get("pubDate", ""),
+                "source": "Jobicy",
+                "contract_type": r.get("jobType", "Remote"),
+                "category": (r.get("jobIndustry", [""])[0] if r.get("jobIndustry") else ""),
+            })
+    except Exception as e:
+        print(f"  [Jobicy] Error searching '{role}': {e}")
+    return jobs
 
 
 # ============================================================
@@ -758,6 +1059,29 @@ def generate_html_report(db, new_job_ids):
         .apply-btn:hover {{ background: var(--accent-light); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }}
         .apply-btn svg {{ width: 14px; height: 14px; }}
 
+        /* ---- Map ---- */
+        .location-row {{ display: flex; align-items: center; gap: 0.35rem; }}
+        .map-toggle {{
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-muted); cursor: pointer;
+            transition: all 0.2s; flex-shrink: 0; padding: 0;
+        }}
+        .map-toggle:hover {{ border-color: var(--accent); color: var(--accent-light); background: var(--accent-glow); }}
+        .map-toggle svg {{ width: 13px; height: 13px; }}
+        .map-container {{
+            margin-top: 0.75rem; border-radius: 12px; overflow: hidden;
+            border: 1px solid var(--border); height: 0; opacity: 0;
+            transition: height 0.35s ease, opacity 0.25s ease;
+        }}
+        .map-container.open {{ height: 200px; opacity: 1; }}
+        .map-container iframe {{ width: 100%; height: 100%; border: 0; }}
+        .map-link {{
+            font-size: 0.7rem; color: var(--text-muted); text-decoration: none;
+            transition: color 0.2s;
+        }}
+        .map-link:hover {{ color: var(--accent-light); }}
+
         /* ---- Responsive ---- */
         @media (max-width: 768px) {{
             .stats {{ grid-template-columns: repeat(2, 1fr); }}
@@ -842,6 +1166,9 @@ def generate_html_report(db, new_job_ids):
                 <button class="filter-btn" onclick="setFilter('Adzuna', this)">Adzuna</button>
                 <button class="filter-btn" onclick="setFilter('Reed', this)">Reed</button>
                 {"<button class='filter-btn' onclick=" + "'setFilter(" + '"Jooble"' + ", this)'" + ">Jooble</button>" if JOOBLE_API_KEY else ""}
+                {"<button class='filter-btn' onclick=" + "'setFilter(" + '"Findwork"' + ", this)'" + ">Findwork</button>" if FINDWORK_API_KEY else ""}
+                <button class="filter-btn" onclick="setFilter('The Muse', this)">The Muse</button>
+                <button class="filter-btn" onclick="setFilter('Jobicy', this)">Jobicy</button>
             </div>
             <select class="sort-select" id="sortSelect" onchange="applyFilters()">
                 <option value="date">Newest first</option>
@@ -1025,6 +1352,9 @@ def generate_html_report(db, new_job_ids):
                 : '<span class="job-salary unknown">Salary unlisted</span>';
 
             const companyEncoded = encodeURIComponent(job.company);
+            const locationEncoded = encodeURIComponent(job.location + ', London, UK');
+            const mapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${{locationEncoded}}`;
+            const mapsEmbedQuery = encodeURIComponent(job.company + ', ' + job.location + ', London, UK');
             const glassdoorUrl = `https://www.glassdoor.co.uk/Reviews/${{companyEncoded}}-Reviews-E_IE0.htm`;
             const linkedinUrl = `https://www.linkedin.com/company/${{job.company_slug}}`;
             const googleUrl = `https://www.google.com/search?q=${{companyEncoded}}+company`;
@@ -1044,15 +1374,24 @@ def generate_html_report(db, new_job_ids):
                     ${{salaryHTML}}
                 </div>
                 <div class="job-meta">
-                    <span class="job-meta-item">
+                    <span class="job-meta-item location-row">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
                         ${{job.location}}
+                        <button class="map-toggle" onclick="toggleMap('${{job.id}}')" title="Show on map">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z"/></svg>
+                        </button>
+                        <a href="${{mapsSearchUrl}}" target="_blank" class="map-link" title="Open in Google Maps">Maps</a>
                     </span>
                     <span class="job-meta-item">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
                         ${{job.date_posted}}
                     </span>
                     ${{deadlineBadge(job.date_posted)}}
+                </div>
+                <div class="map-container" id="map-${{job.id}}">
+                    <iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                        src="" data-src="https://maps.google.com/maps?q=${{mapsEmbedQuery}}&t=&z=14&ie=UTF8&iwloc=&output=embed">
+                    </iframe>
                 </div>
                 ${{cvMatchHTML(job.cv_score)}}
                 <div class="job-desc">${{escapeHTML(job.description)}}</div>
@@ -1067,8 +1406,8 @@ def generate_html_report(db, new_job_ids):
                             <button class="status-btn ${{status === 'rejected' ? 'rejected' : ''}}" onclick="setJobStatus('${{job.id}}', 'rejected')">Not Interested</button>
                         </div>
                     </div>
-                    <a href="${{job.url}}" target="_blank" class="apply-btn">
-                        Apply
+                    <a href="${{job.url}}" target="_blank" class="apply-btn" title="${{getDomain(job.url)}}">
+                        Apply on ${{getDomain(job.url)}}
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
                     </a>
                 </div>
@@ -1078,10 +1417,65 @@ def generate_html_report(db, new_job_ids):
 
     function renderJobs() {{ applyFilters(); }}
 
+    // ---- Map toggle ----
+    function toggleMap(jobId) {{
+        const container = document.getElementById(`map-${{jobId}}`);
+        if (!container) return;
+        const isOpen = container.classList.contains('open');
+        // Close all other maps first
+        document.querySelectorAll('.map-container.open').forEach(el => {{
+            el.classList.remove('open');
+        }});
+        if (!isOpen) {{
+            // Lazy-load the iframe src on first open
+            const iframe = container.querySelector('iframe');
+            if (iframe && !iframe.src.includes('google.com/maps')) {{
+                iframe.src = iframe.getAttribute('data-src');
+            }}
+            container.classList.add('open');
+        }}
+    }}
+
     function escapeHTML(str) {{
         const div = document.createElement('div');
         div.textContent = str || '';
         return div.innerHTML;
+    }}
+
+    function getDomain(url) {{
+        try {{
+            const hostname = new URL(url).hostname.replace('www.', '');
+            // Prettify common job sites
+            const names = {{
+                'reed.co.uk': 'Reed',
+                'indeed.co.uk': 'Indeed',
+                'indeed.com': 'Indeed',
+                'linkedin.com': 'LinkedIn',
+                'glassdoor.co.uk': 'Glassdoor',
+                'glassdoor.com': 'Glassdoor',
+                'totaljobs.com': 'Totaljobs',
+                'cwjobs.co.uk': 'CWJobs',
+                'monster.co.uk': 'Monster',
+                'jooble.org': 'Jooble',
+                'findwork.dev': 'Findwork',
+                'myworkdayjobs.com': 'Workday',
+                'lever.co': 'Lever',
+                'greenhouse.io': 'Greenhouse',
+                'smartrecruiters.com': 'SmartRecruiters',
+                'jobs.lever.co': 'Lever',
+                'boards.greenhouse.io': 'Greenhouse',
+                'apply.workable.com': 'Workable',
+            }};
+            // Check for partial matches (e.g., *.myworkdayjobs.com)
+            for (const [domain, name] of Object.entries(names)) {{
+                if (hostname.endsWith(domain)) return name;
+            }}
+            // Return shortened domain
+            const parts = hostname.split('.');
+            return parts.length > 2 ? parts.slice(-2).join('.') : hostname;
+        }} catch {{
+            return 'site';
+        }}
     }}
 
     // ---- CSV Export ----
@@ -1288,12 +1682,19 @@ def run():
         adzuna_jobs = search_adzuna(role)
         reed_jobs = search_reed(role)
         jooble_jobs = search_jooble(role)
-        combined = adzuna_jobs + reed_jobs + jooble_jobs
+        findwork_jobs = search_findwork(role)
+        muse_jobs = search_themuse(role)
+        jobicy_jobs = search_jobicy(role)
+        combined = adzuna_jobs + reed_jobs + jooble_jobs + findwork_jobs + muse_jobs + jobicy_jobs
 
-        a_count = len(adzuna_jobs)
-        r_count = len(reed_jobs)
-        j_count = len(jooble_jobs)
-        print(f"  Found {a_count} (Adzuna) + {r_count} (Reed) + {j_count} (Jooble) = {len(combined)} results")
+        counts = []
+        if adzuna_jobs: counts.append(f"{len(adzuna_jobs)} Adzuna")
+        if reed_jobs: counts.append(f"{len(reed_jobs)} Reed")
+        if jooble_jobs: counts.append(f"{len(jooble_jobs)} Jooble")
+        if findwork_jobs: counts.append(f"{len(findwork_jobs)} Findwork")
+        if muse_jobs: counts.append(f"{len(muse_jobs)} Muse")
+        if jobicy_jobs: counts.append(f"{len(jobicy_jobs)} Jobicy")
+        print(f"  Found {' + '.join(counts) or '0'} = {len(combined)} results")
 
         for job in combined:
             if is_excluded(job):
@@ -1341,6 +1742,9 @@ def run():
     })
     db["history"] = db["history"][-50:]
 
+    # Validate URLs - remove jobs with dead links
+    dead_links = validate_and_clean_urls(db)
+
     save_database(db)
 
     print(f"\n{'=' * 55}")
@@ -1348,6 +1752,7 @@ def run():
     print(f"  New jobs found:  {len(all_new_jobs)}")
     print(f"  Total active:    {len(db['jobs'])}")
     print(f"  Expired/removed: {len(expired)}")
+    print(f"  Dead links:      {len(dead_links)}")
     print(f"{'=' * 55}")
 
     generate_html_report(db, new_job_ids)
